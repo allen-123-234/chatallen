@@ -786,10 +786,29 @@
             font-weight: bold;
             font-size: 16px;
             transition: transform 0.2s;
+            margin-bottom: 10px;
         }
 
         .auth-button:hover {
             transform: translateY(-2px);
+        }
+
+        .auth-link {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            color: #667eea;
+            border: 1px solid #667eea;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .auth-link:hover {
+            background: #667eea;
+            color: white;
         }
 
         .auth-error {
@@ -1815,6 +1834,7 @@
                     <input type="password" id="loginPassword" required>
                 </div>
                 <button type="submit" class="auth-button">登入</button>
+                <button type="button" class="auth-link" onclick="showForgotPasswordForm()">忘記密碼？</button>
             </form>
 
             <!-- 註冊表單 -->
@@ -1849,6 +1869,38 @@
                     <input type="password" id="registerPasswordConfirm" required>
                 </div>
                 <button type="submit" class="auth-button">註冊</button>
+                <button type="button" class="auth-link" onclick="showForgotPasswordForm()">忘記密碼？</button>
+            </form>
+
+            <!-- 忘記密碼表單 -->
+            <form class="auth-form" id="forgotPasswordForm" onsubmit="handleForgotPassword(event)">
+                <h2 style="text-align: center; margin-bottom: 20px;">重設密碼</h2>
+                
+                <div id="forgotStep1">
+                    <div class="form-group">
+                        <label>請輸入您的電子郵件</label>
+                        <input type="email" id="forgotEmail" required>
+                    </div>
+                    <button type="button" class="auth-button" onclick="sendVerificationCode()">發送驗證碼</button>
+                    <button type="button" class="auth-link" onclick="backToLogin()">返回登入</button>
+                </div>
+
+                <div id="forgotStep2" style="display: none;">
+                    <div class="form-group">
+                        <label>驗證碼（已發送到您的郵箱）</label>
+                        <input type="text" id="verificationCode" placeholder="輸入 6 位驗證碼" required>
+                    </div>
+                    <div class="form-group">
+                        <label>新密碼</label>
+                        <input type="password" id="newPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label>確認新密碼</label>
+                        <input type="password" id="confirmNewPassword" required>
+                    </div>
+                    <button type="submit" class="auth-button">重設密碼</button>
+                    <button type="button" class="auth-link" onclick="backToLogin()">返回登入</button>
+                </div>
             </form>
         </div>
     </div>

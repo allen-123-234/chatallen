@@ -57,6 +57,9 @@ initializeAdminAccount();
 // 使用者 Token 存儲（簡單實現）
 const activeTokens = new Set();
 
+// 驗證碼臨時存儲（email -> {code, timestamp}）
+const verificationCodes = new Map();
+
 // 添加 Token 驗證端點（用於前端重新連接）
 app.post('/api/auth/verify-token', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -261,6 +264,118 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/auth/logout', verifyToken, (req, res) => {
   activeTokens.delete(req.token);
   res.json({ message: '登出成功' });
+});
+
+// ==================== 忘記密碼 API ====================
+
+// 發送驗證碼
+app.post('/api/auth/send-verification-code', (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: '郵箱為必填' });
+  }
+  
+  const users = readJSON(usersFile);
+  const user = users.find(u => u.email === email);
+  
+  if (!user) {
+    return res.status(404).json({ error: '郵箱不存在' });
+  }
+  
+  // 生成 6 位數字驗證碼
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // 存儲驗證碼（15 分鐘後過期）
+  verificationCodes.set(email, {
+    code,
+    timestamp: Date.now(),
+    userId: user.id
+  });
+  
+  // 開發環境：打印到控制台，生產環境應發送郵件
+  console.log(`📧 驗證碼: ${code} (郵箱: ${email})`);
+  
+  // TODO: 集成真實的郵件服務（如 Nodemailer）
+  // 暫時返回成功即可
+  
+  res.json({ message: '驗證碼已發送' });
+});
+
+// 驗證碼驗證
+app.post('/api/auth/verify-code', (req, res) => {
+  const { email, verificationCode } = req.body;
+  
+  if (!email || !verificationCode) {
+    return res.status(400).json({ error: '郵箱和驗證碼為必填' });
+  }
+  
+  const stored = verificationCodes.get(email);
+  
+  if (!stored) {
+    return res.status(400).json({ error: '驗證碼已過期或不存在' });
+  }
+  
+  // 檢查驗證碼是否在 15 分鐘內
+  const expiryTime = 15 * 60 * 1000; // 15 分鐘
+  if (Date.now() - stored.timestamp > expiryTime) {
+    verificationCodes.delete(email);
+    return res.status(400).json({ error: '驗證碼已過期' });
+  }
+  
+  // 驗證碼是否正確
+  if (stored.code !== verificationCode) {
+    return res.status(400).json({ error: '驗證碼錯誤' });
+  }
+  
+  res.json({ message: '驗證碼正確', valid: true });
+});
+
+// 重設密碼
+app.post('/api/auth/reset-password', (req, res) => {
+  const { email, verificationCode, newPassword } = req.body;
+  
+  if (!email || !verificationCode || !newPassword) {
+    return res.status(400).json({ error: '郵箱、驗證碼和新密碼為必填' });
+  }
+  
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: '密碼至少需要 6 個字符' });
+  }
+  
+  const stored = verificationCodes.get(email);
+  
+  if (!stored) {
+    return res.status(400).json({ error: '驗證碼已過期或不存在' });
+  }
+  
+  // 檢查驗證碼是否在 15 分鐘內
+  const expiryTime = 15 * 60 * 1000;
+  if (Date.now() - stored.timestamp > expiryTime) {
+    verificationCodes.delete(email);
+    return res.status(400).json({ error: '驗證碼已過期' });
+  }
+  
+  // 驗證碼是否正確
+  if (stored.code !== verificationCode) {
+    return res.status(400).json({ error: '驗證碼錯誤' });
+  }
+  
+  // 更新密碼
+  const users = readJSON(usersFile);
+  const user = users.find(u => u.email === email);
+  
+  if (!user) {
+    return res.status(404).json({ error: '用戶不存在' });
+  }
+  
+  user.password = newPassword;
+  writeJSON(usersFile, users);
+  
+  // 清除已使用的驗證碼
+  verificationCodes.delete(email);
+  
+  res.json({ message: '密碼重設成功' });
 });
 
 // 獲取所有用戶

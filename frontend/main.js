@@ -255,6 +255,136 @@ function showAuthError(message) {
   }
 }
 
+// ==================== 忘記密碼功能 ====================
+function showForgotPasswordForm() {
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+  
+  if (loginForm) loginForm.style.display = 'none';
+  if (registerForm) registerForm.style.display = 'none';
+  if (forgotPasswordForm) forgotPasswordForm.style.display = 'block';
+  
+  const step1 = document.getElementById('forgotStep1');
+  const step2 = document.getElementById('forgotStep2');
+  if (step1) step1.style.display = 'block';
+  if (step2) step2.style.display = 'none';
+}
+
+function backToLogin() {
+  const loginForm = document.getElementById('loginForm');
+  const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+  
+  if (loginForm) loginForm.style.display = 'block';
+  if (forgotPasswordForm) forgotPasswordForm.style.display = 'none';
+  
+  showAuthError('');
+}
+
+async function sendVerificationCode() {
+  const emailInput = document.getElementById('forgotEmail');
+  const email = emailInput?.value?.trim();
+  
+  if (!email) {
+    showAuthError('請輸入郵箱地址');
+    return;
+  }
+  
+  if (!email.includes('@')) {
+    showAuthError('郵箱格式不正確');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${baseURL}/api/auth/send-verification-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      showAuthError(data.error || '發送驗證碼失敗');
+      return;
+    }
+    
+    showAuthError('');
+    alert('驗證碼已發送到您的郵箱，請查收');
+    
+    // 顯示第二步表單
+    const step1 = document.getElementById('forgotStep1');
+    const step2 = document.getElementById('forgotStep2');
+    if (step1) step1.style.display = 'none';
+    if (step2) step2.style.display = 'block';
+    
+    // 保存郵箱以供後續使用
+    document.getElementById('forgotEmail').dataset.emailForReset = email;
+    
+  } catch (error) {
+    console.error('發送驗證碼錯誤:', error);
+    showAuthError('網絡錯誤，請重試');
+  }
+}
+
+async function handleForgotPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById('forgotEmail').dataset.emailForReset;
+  const verificationCode = document.getElementById('verificationCode')?.value?.trim();
+  const newPassword = document.getElementById('newPassword')?.value;
+  const confirmNewPassword = document.getElementById('confirmNewPassword')?.value;
+  
+  if (!verificationCode) {
+    showAuthError('請輸入驗證碼');
+    return;
+  }
+  
+  if (!newPassword) {
+    showAuthError('請輸入新密碼');
+    return;
+  }
+  
+  if (newPassword !== confirmNewPassword) {
+    showAuthError('新密碼不一致');
+    return;
+  }
+  
+  if (newPassword.length < 6) {
+    showAuthError('密碼至少需要 6 個字符');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${baseURL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        email,
+        verificationCode,
+        newPassword
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      showAuthError(data.error || '密碼重設失敗');
+      return;
+    }
+    
+    showAuthError('');
+    alert('密碼重設成功！請使用新密碼登入');
+    
+    // 清空表單並返回登入頁面
+    document.getElementById('forgotPasswordForm').reset();
+    backToLogin();
+    
+  } catch (error) {
+    console.error('重設密碼錯誤:', error);
+    showAuthError('網絡錯誤，請重試');
+  }
+}
+
 async function handleLogout() {
   if (!confirm('確定要登出嗎？')) return;
 
