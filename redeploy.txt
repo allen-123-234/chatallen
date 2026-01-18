@@ -1,0 +1,2 @@
+# Force Vercel Redeploy
+# This file change will trigger Vercel to redeploy with latest CORS settings
