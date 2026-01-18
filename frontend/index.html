@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Cloud Site - 雲端應用</title>
+    <!-- Font Awesome 圖示庫 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -217,27 +218,13 @@
             border: none;
             font-size: 24px;
             cursor: pointer;
-            padding: 8px 12px;
+            padding: 8px;
             opacity: 0.5;
-            transition: all 0.3s ease;
-            color: #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-        }
-
-        .bottom-nav .nav-btn:hover {
-            opacity: 0.8;
-            background: rgba(0,0,0,0.05);
-            transform: translateY(-2px);
+            transition: opacity 0.3s;
         }
 
         .bottom-nav .nav-btn.active {
             opacity: 1;
-            color: #0095f6;
-            background: rgba(0, 149, 246, 0.1);
-            font-weight: bold;
         }
 
         /* ==================== 創建文章盒子 ==================== */
@@ -1843,17 +1830,12 @@
                     <input type="email" id="registerEmail">
                 </div>
                 <div class="form-group">
-                    <label>選擇頭像</label>
-                    <select id="registerAvatar">
-                        <option value="seed1">頭像 1</option>
-                        <option value="seed2">頭像 2</option>
-                        <option value="seed3">頭像 3</option>
-                        <option value="seed4">頭像 4</option>
-                        <option value="seed5">頭像 5</option>
-                    </select>
+                    <label>上傳頭像</label>
+                    <input type="file" id="registerAvatarFile" accept="image/*" onchange="previewAvatar(event)">
                     <div id="avatarPreview" style="margin-top: 10px; text-align: center;">
-                        <img id="avatarPreviewImg" src="" alt="頭像預覽" style="width: 60px; height: 60px; border-radius: 50%; background: #ddd;">
+                        <img id="avatarPreviewImg" src="" alt="頭像預覽" style="width: 80px; height: 80px; border-radius: 50%; background: #ddd; object-fit: cover;">
                     </div>
+                    <p style="font-size: 12px; color: #999; margin-top: 5px;">建議：正方形圖片，大小 < 2MB</p>
                 </div>
                 <div class="form-group">
                     <label>密碼</label>
@@ -1935,50 +1917,11 @@
             <!-- 用戶資料頁面 -->
             <div class="profile-page" id="profilePage">
                 <div id="profileCard"></div>
-                <div class="avatar-upload" style="text-align: center; margin: 20px 0; padding: 20px; background: #f5f5f5; border-radius: 12px;">
-                    <h3><i class="fas fa-image"></i> 頭像上傳</h3>
-                    <div style="margin: 15px 0;">
-                        <div style="margin-bottom: 15px;">
-                            <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
-                            <button onclick="document.getElementById('avatarFileInput').click()" style="
-                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                color: white;
-                                border: none;
-                                padding: 10px 20px;
-                                border-radius: 6px;
-                                cursor: pointer;
-                                font-size: 14px;
-                                transition: all 0.3s ease;
-                            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                <i class="fas fa-upload"></i> 上傳自訂頭像
-                            </button>
-                        </div>
-                        <div id="avatarPreview" style="display: none; margin-bottom: 15px;">
-                            <p style="color: #666; font-size: 12px; margin-bottom: 10px;">預覽</p>
-                            <img id="customAvatarPreview" src="" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #667eea;">
-                            <button onclick="confirmAvatarUpload()" style="
-                                background: #0095f6;
-                                color: white;
-                                border: none;
-                                padding: 8px 16px;
-                                border-radius: 6px;
-                                cursor: pointer;
-                                margin-left: 10px;
-                                font-size: 12px;
-                            ">確認上傳</button>
-                            <button onclick="cancelAvatarUpload()" style="
-                                background: #ccc;
-                                color: #333;
-                                border: none;
-                                padding: 8px 16px;
-                                border-radius: 6px;
-                                cursor: pointer;
-                                margin-left: 5px;
-                                font-size: 12px;
-                            ">取消</button>
-                        </div>
-                        <p style="color: #666; font-size: 12px; margin-top: 10px;">支援 JPG, PNG, GIF 格式，最大 5MB</p>
-                    </div>
+                <div class="avatar-upload" style="text-align: center; margin: 20px 0;">
+                    <p style="margin: 10px 0; font-weight: bold;">📸 更改頭像</p>
+                    <input type="file" id="profileAvatarFile" accept="image/*" onchange="handleProfileAvatarChange(event)" style="display: none;">
+                    <button onclick="document.getElementById('profileAvatarFile').click()" style="background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 10px 5px;">上傳新頭像</button>
+                    <p style="color: #999; font-size: 12px; margin-top: 5px;">建議：正方形圖片，大小 &lt; 2MB</p>
                 </div>
             </div>
 
@@ -2033,9 +1976,9 @@
         <!-- 底部導航欄 -->
         <div class="bottom-nav">
             <button class="nav-btn active" onclick="switchMainPage('feed')" title="首頁"><i class="fas fa-home"></i></button>
-            <button class="nav-btn" onclick="switchMainPage('post')" title="發佈"><i class="fas fa-plus"></i></button>
+            <button class="nav-btn" onclick="switchMainPage('post')" title="發佈"><i class="fas fa-square-plus"></i></button>
             <button class="nav-btn" onclick="switchMainPage('chat')" title="聊天"><i class="fas fa-comments"></i></button>
-            <button class="nav-btn" onclick="switchMainPage('profile')" title="個人資料"><i class="fas fa-user-circle"></i></button>
+            <button class="nav-btn" onclick="switchMainPage('profile')" title="個人"><i class="fas fa-user"></i></button>
         </div>
     </div>
 

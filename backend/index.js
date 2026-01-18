@@ -11,9 +11,7 @@ const dbDir = path.join(__dirname, 'db');
 
 // 中間件
 app.use(cors());
-// 增加 JSON 解析限制以支援 Base64 圖片
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json());
 
 // 確保 db 目錄存在
 if (!fs.existsSync(dbDir)) {
@@ -112,7 +110,7 @@ function verifyToken(req, res, next) {
 
 // 註冊
 app.post('/api/auth/register', (req, res) => {
-  const { username, password, email } = req.body;
+  const { username, password, email, avatar } = req.body;
   
   if (!username || !password) {
     return res.status(400).json({ error: '用戶名和密碼為必填' });
@@ -130,7 +128,7 @@ app.post('/api/auth/register', (req, res) => {
     username,
     password, // 實際應用應使用密碼加密
     email: email || '',
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+    avatar: avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
     createdAt: new Date().toISOString()
   };
 
@@ -261,20 +259,8 @@ app.put('/api/users/:id', verifyToken, (req, res) => {
   
   // 允許更新 bio、avatar、email
   user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
+  user.avatar = req.body.avatar !== undefined ? req.body.avatar : user.avatar;
   user.email = req.body.email !== undefined ? req.body.email : user.email;
-  
-  // 處理 avatar 更新 - 驗證 Base64 大小
-  if (req.body.avatar !== undefined) {
-    // 如果是 Base64 圖片（長度超過 100），驗證大小
-    if (req.body.avatar.startsWith('data:image')) {
-      const base64Size = Buffer.byteLength(req.body.avatar, 'utf8');
-      // 限制為 3MB
-      if (base64Size > 3 * 1024 * 1024) {
-        return res.status(413).json({ error: '圖片檔案過大，請使用小於 3MB 的圖片' });
-      }
-    }
-    user.avatar = req.body.avatar;
-  }
   
   writeJSON(usersFile, users);
   

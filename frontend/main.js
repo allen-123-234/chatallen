@@ -207,10 +207,17 @@ async function handleRegister(e) {
   const password = document.getElementById('registerPassword').value;
   const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
   const email = document.getElementById('registerEmail').value;
-  const avatarSeed = document.getElementById('registerAvatar').value;
+  
+  // 取得上傳的頭像（Base64 格式）
+  const avatarBase64 = window.avatarBase64 || '';
 
   if (password !== passwordConfirm) {
     showAuthError('密碼不一致');
+    return;
+  }
+
+  if (!avatarBase64) {
+    showAuthError('請上傳頭像');
     return;
   }
 
@@ -222,7 +229,7 @@ async function handleRegister(e) {
         username, 
         password, 
         email,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`
+        avatar: avatarBase64
       })
     });
 
@@ -239,6 +246,7 @@ async function handleRegister(e) {
     // 清空表單
     document.getElementById('registerForm').reset();
     document.getElementById('avatarPreviewImg').src = '';
+    window.avatarBase64 = null;
     switchAuthTab('login');
   } catch (error) {
     showAuthError('網絡錯誤');
@@ -1724,30 +1732,67 @@ function updateAllAvatars(newAvatar) {
   console.log('✅ 所有頭像已更新');
 }
 
+// ==================== 頭像功能 ====================
+function previewAvatar(event) {
+  const file = event.target.files[0];
+  const img = document.getElementById('avatarPreviewImg');
+  
+  if (!file) return;
+  
+  // 檢查檔案大小（< 2MB）
+  if (file.size > 2 * 1024 * 1024) {
+    alert('檔案太大，請選擇小於 2MB 的圖片');
+    event.target.value = '';
+    return;
+  }
+  
+  // 讀取並顯示預覽
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    img.src = e.target.result;
+    // 存儲到全局變數便於註冊時使用
+    window.avatarBase64 = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function updateAvatarPreview() {
-  const avatarSelect = document.getElementById('registerAvatar');
+  const avatarSelect = document.getElementById('registerAvatarFile');
   const img = document.getElementById('avatarPreviewImg');
   
   if (!avatarSelect || !img) {
-    return; // 元素不存在，安全地返回
+    return;
   }
   
-  const avatarSeed = avatarSelect.value;
-  img.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`;
+  // 如果有上傳的檔案，顯示已有
+  if (avatarSelect.files && avatarSelect.files[0]) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.src = e.target.result;
+      window.avatarBase64 = e.target.result;
+    };
+    reader.readAsDataURL(avatarSelect.files[0]);
+  }
 }
 
 function showAvatarOptions() {
-  const avatars = ['seed1', 'seed2', 'seed3', 'seed4', 'seed5', 'seed6', 'seed7', 'seed8'];
-  const options = avatars.map((seed, index) => `${index + 1}`).join(', ');
-  
-  const choice = prompt(`選擇頭像 (1-8):\n${options}`);
-  if (choice && avatars[parseInt(choice) - 1]) {
-    changeAvatar(avatars[parseInt(choice) - 1]);
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = previewAvatar;
+  input.click();
+}
   }
 }
 
-async function changeAvatar(avatarSeed) {
-  const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`;
+async function changeAvatar(avatarData) {
+  // avatarData 可以是 Base64 字符串或 null（使用上傳的圖片）
+  const avatar = avatarData || window.avatarBase64;
+  
+  if (!avatar) {
+    alert('請先上傳或選擇頭像');
+    return;
+  }
   
   try {
     const response = await fetch(`${baseURL}/api/users/${currentUser.id}`, {
@@ -1772,16 +1817,8 @@ async function changeAvatar(avatarSeed) {
   }
 }
 
-// ==================== 檔案上傳頭像 ====================
-let selectedAvatarFile = null;
-
+// ==================== 初始化 ====================
 document.addEventListener('DOMContentLoaded', async () => {
-  // 添加檔案上傳監聽器
-  const avatarFileInput = document.getElementById('avatarFileInput');
-  if (avatarFileInput) {
-    avatarFileInput.addEventListener('change', handleAvatarFileSelect);
-  }
-});
   console.log('📄 頁面加載開始');
   
   // 添加頭像選擇監聽器
@@ -1876,102 +1913,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('✨ 未登入，顯示登入頁面');
     showAuthPage();
   }
-;
-
-// 處理頭像檔案選擇
-function handleAvatarFileSelect(event) {
+});
+// 處理個人資料頁面的頭像更改
+function handleProfileAvatarChange(event) {
   const file = event.target.files[0];
+  
   if (!file) return;
-
-  // 驗證檔案大小 (5MB)
-  const maxSize = 5 * 1024 * 1024;
-  if (file.size > maxSize) {
-    alert('檔案過大，請選擇小於 5MB 的檔案');
+  
+  // 檢查檔案大小（< 2MB）
+  if (file.size > 2 * 1024 * 1024) {
+    alert('檔案太大，請選擇小於 2MB 的圖片');
+    event.target.value = '';
     return;
   }
-
-  // 驗證檔案類型
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (!allowedTypes.includes(file.type)) {
-    alert('不支援此檔案格式，請選擇 JPG, PNG, GIF 或 WebP');
-    return;
-  }
-
-  selectedAvatarFile = file;
-
-  // 讀取檔案並顯示預覽
+  
+  // 讀取檔案
   const reader = new FileReader();
-  reader.onload = (e) => {
-    const preview = document.getElementById('avatarPreview');
-    const previewImg = document.getElementById('customAvatarPreview');
-    if (preview && previewImg) {
-      previewImg.src = e.target.result;
-      preview.style.display = 'block';
+  reader.onload = async (e) => {
+    const avatarBase64 = e.target.result;
+    
+    try {
+      const response = await fetch(`${baseURL}/api/users/${currentUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentToken}`
+        },
+        body: JSON.stringify({ avatar: avatarBase64 })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        currentUser.avatar = data.avatar;
+        localStorage.setItem('user', JSON.stringify(currentUser));
+        
+        // 更新界面上的頭像
+        const userAvatarImg = document.getElementById('userAvatar');
+        if (userAvatarImg) {
+          userAvatarImg.src = avatarBase64;
+        }
+        
+        // 重新加載個人資料頁面
+        loadUserProfile(currentUser.id);
+        alert('頭像已更新');
+      } else {
+        alert('更新頭像失敗');
+      }
+    } catch (error) {
+      console.error('上傳頭像錯誤:', error);
+      alert('上傳頭像失敗');
     }
   };
   reader.readAsDataURL(file);
-}
-
-function cancelAvatarUpload() {
-  selectedAvatarFile = null;
-  const fileInput = document.getElementById('avatarFileInput');
-  const preview = document.getElementById('avatarPreview');
-  if (fileInput) fileInput.value = '';
-  if (preview) preview.style.display = 'none';
-}
-
-async function confirmAvatarUpload() {
-  if (!selectedAvatarFile) {
-    alert('請先選擇頭像檔案');
-    return;
-  }
-
-  if (!currentUser || !currentToken) {
-    alert('請先登入');
-    return;
-  }
-
-  try {
-    // 轉換檔案為 Base64
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64Avatar = e.target.result;
-
-      try {
-        const response = await fetch(`${baseURL}/api/users/${currentUser.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${currentToken}`
-          },
-          body: JSON.stringify({ avatar: base64Avatar })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          currentUser.avatar = data.avatar;
-          localStorage.setItem('user', JSON.stringify(currentUser));
-          
-          const userAvatarImg = document.getElementById('userAvatar');
-          if (userAvatarImg) {
-            userAvatarImg.src = base64Avatar;
-          }
-          
-          cancelAvatarUpload();
-          alert('頭像已成功更新！');
-          loadUserProfile(currentUser.id);
-        } else {
-          const error = await response.json();
-          alert('上傳失敗：' + (error.message || '未知錯誤'));
-        }
-      } catch (error) {
-        console.error('上傳頭像失敗:', error);
-        alert('上傳失敗，請稍後重試');
-      }
-    };
-    reader.readAsDataURL(selectedAvatarFile);
-  } catch (error) {
-    console.error('處理檔案失敗:', error);
-    alert('處理檔案失敗');
-  }
 }
