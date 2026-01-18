@@ -293,23 +293,14 @@ app.post('/api/auth/send-verification-code', (req, res) => {
     userId: user.id
   });
   
-  // 開發環境：打印到控制台，生產環境應發送郵件
+  // 開發環境：打印到控制台
   console.log(`📧 驗證碼: ${code} (郵箱: ${email})`);
-  
-  // TODO: 集成真實的郵件服務（如 Nodemailer）
-  // 暫時在開發環境返回驗證碼，生產環境不返回
-  const isProduction = process.env.NODE_ENV === 'production';
   
   const response = {
     message: '驗證碼已發送',
-    email
+    email,
+    code // 暫時在所有環境返回驗證碼用於測試
   };
-  
-  // 開發環境下返回驗證碼以便測試
-  if (!isProduction) {
-    response.code = code;
-    response.devMessage = '⚠️ 開發環境：驗證碼已顯示，生產環境需要配置郵件服務';
-  }
   
   res.json(response);
 });
