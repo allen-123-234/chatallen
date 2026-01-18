@@ -1,7 +1,7 @@
 // 配置
 let baseURL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000' 
-  : `https://${window.location.hostname}`;
+  : 'https://web-production-b1630.up.railway.app';
 let currentUser = null;
 let currentToken = null;
 let selectedUserId = null;
