@@ -255,142 +255,6 @@ function showAuthError(message) {
   }
 }
 
-// ==================== 忘記密碼功能 ====================
-function showForgotPasswordForm() {
-  const loginForm = document.getElementById('loginForm');
-  const registerForm = document.getElementById('registerForm');
-  const forgotPasswordForm = document.getElementById('forgotPasswordForm');
-  
-  if (loginForm) loginForm.style.display = 'none';
-  if (registerForm) registerForm.style.display = 'none';
-  if (forgotPasswordForm) forgotPasswordForm.style.display = 'block';
-  
-  const step1 = document.getElementById('forgotStep1');
-  const step2 = document.getElementById('forgotStep2');
-  if (step1) step1.style.display = 'block';
-  if (step2) step2.style.display = 'none';
-}
-
-function backToLogin() {
-  const loginForm = document.getElementById('loginForm');
-  const forgotPasswordForm = document.getElementById('forgotPasswordForm');
-  
-  if (loginForm) loginForm.style.display = 'block';
-  if (forgotPasswordForm) forgotPasswordForm.style.display = 'none';
-  
-  showAuthError('');
-}
-
-async function sendVerificationCode() {
-  const emailInput = document.getElementById('forgotEmail');
-  const email = emailInput?.value?.trim();
-  
-  if (!email) {
-    showAuthError('請輸入郵箱地址');
-    return;
-  }
-  
-  if (!email.includes('@')) {
-    showAuthError('郵箱格式不正確');
-    return;
-  }
-  
-  try {
-    const response = await fetch(`${baseURL}/api/auth/send-verification-code`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      showAuthError(data.error || '發送驗證碼失敗');
-      return;
-    }
-    
-    showAuthError('');
-    
-    // 開發環境：顯示驗證碼
-    if (data.code) {
-      alert(`✅ 驗證碼已發送！\n\n開發環境驗證碼: ${data.code}\n\n請在下方輸入此驗證碼`);
-    } else {
-      alert('✅ 驗證碼已發送到您的郵箱，請查收');
-    }
-    
-    // 顯示第二步表單
-    const step1 = document.getElementById('forgotStep1');
-    const step2 = document.getElementById('forgotStep2');
-    if (step1) step1.style.display = 'none';
-    if (step2) step2.style.display = 'block';
-    
-    // 保存郵箱以供後續使用
-    document.getElementById('forgotEmail').dataset.emailForReset = email;
-    
-  } catch (error) {
-    console.error('發送驗證碼錯誤:', error);
-    showAuthError('網絡錯誤，請重試');
-  }
-}
-
-async function handleForgotPassword(e) {
-  e.preventDefault();
-  const email = document.getElementById('forgotEmail').dataset.emailForReset;
-  const verificationCode = document.getElementById('verificationCode')?.value?.trim();
-  const newPassword = document.getElementById('newPassword')?.value;
-  const confirmNewPassword = document.getElementById('confirmNewPassword')?.value;
-  
-  if (!verificationCode) {
-    showAuthError('請輸入驗證碼');
-    return;
-  }
-  
-  if (!newPassword) {
-    showAuthError('請輸入新密碼');
-    return;
-  }
-  
-  if (newPassword !== confirmNewPassword) {
-    showAuthError('新密碼不一致');
-    return;
-  }
-  
-  if (newPassword.length < 6) {
-    showAuthError('密碼至少需要 6 個字符');
-    return;
-  }
-  
-  try {
-    const response = await fetch(`${baseURL}/api/auth/reset-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        email,
-        verificationCode,
-        newPassword
-      })
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      showAuthError(data.error || '密碼重設失敗');
-      return;
-    }
-    
-    showAuthError('');
-    alert('密碼重設成功！請使用新密碼登入');
-    
-    // 清空表單並返回登入頁面
-    document.getElementById('forgotPasswordForm').reset();
-    backToLogin();
-    
-  } catch (error) {
-    console.error('重設密碼錯誤:', error);
-    showAuthError('網絡錯誤，請重試');
-  }
-}
-
 async function handleLogout() {
   if (!confirm('確定要登出嗎？')) return;
 
@@ -959,37 +823,59 @@ function renderFeed(posts) {
     return;
   }
 
-  container.innerHTML = posts.map(post => `
-    <div class="post-card">
-      <div class="post-header">
-        <img src="${post.authorAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}" alt="" class="post-author-avatar">
-        <div class="post-author-info">
-          <div class="post-author-name">${escapeHtml(post.author)}</div>
-          <div class="post-time">${new Date(post.createdAt).toLocaleString('zh-tw')}</div>
+  container.innerHTML = posts.map(post => {
+    let mediaHTML = '';
+    
+    // 影片
+    if (post.video) {
+      mediaHTML += `<video src="${post.video}" controls style="width: 100%; max-height: 300px; border-radius: 8px; margin-bottom: 10px;"></video>`;
+    }
+    
+    // 音頻
+    if (post.audio) {
+      mediaHTML += `
+        <div class="post-audio" data-post-id="${post.id}">
+          <audio src="${post.audio}" class="post-audio-element" style="width: 100%; margin-bottom: 10px;"></audio>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="post-card" data-post-id="${post.id}">
+        <div class="post-header">
+          <img src="${post.authorAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}" alt="" class="post-author-avatar">
+          <div class="post-author-info">
+            <div class="post-author-name">${escapeHtml(post.author)}</div>
+            <div class="post-time">${new Date(post.createdAt).toLocaleString('zh-tw')}</div>
+          </div>
+        </div>
+
+        <div class="post-body">
+          <div class="post-title">${escapeHtml(post.title)}</div>
+          <div class="post-content">${escapeHtml(post.content)}</div>
+          ${mediaHTML}
+        </div>
+
+        <div class="post-actions">
+          <button class="post-action-btn ${post.isLiked ? 'liked' : ''}" onclick="toggleLike(${post.id}, ${post.isLiked})">
+            ${post.isLiked ? '❤️' : '🤍'} ${post.likeCount}
+          </button>
+          <button class="post-action-btn" onclick="toggleComments(${post.id})">
+            💬 留言
+          </button>
+        </div>
+
+        <div class="post-comments" id="comments-${post.id}" style="display: none;"></div>
+        <div class="comment-input-group" id="comment-input-${post.id}" style="display: none;">
+          <input type="text" placeholder="新增留言..." class="comment-input">
+          <button onclick="addComment(${post.id})">發送</button>
         </div>
       </div>
+    `;
+  }).join('');
 
-      <div class="post-body">
-        <div class="post-title">${escapeHtml(post.title)}</div>
-        <div class="post-content">${escapeHtml(post.content)}</div>
-      </div>
-
-      <div class="post-actions">
-        <button class="post-action-btn ${post.isLiked ? 'liked' : ''}" onclick="toggleLike(${post.id}, ${post.isLiked})">
-          ${post.isLiked ? '❤️' : '🤍'} ${post.likeCount}
-        </button>
-        <button class="post-action-btn" onclick="toggleComments(${post.id})">
-          💬 留言
-        </button>
-      </div>
-
-      <div class="post-comments" id="comments-${post.id}" style="display: none;"></div>
-      <div class="comment-input-group" id="comment-input-${post.id}" style="display: none;">
-        <input type="text" placeholder="新增留言..." class="comment-input">
-        <button onclick="addComment(${post.id})">發送</button>
-      </div>
-    </div>
-  `).join('');
+  // 初始化滑動音頻播放
+  initScrollAudioPlayback();
 }
 
 async function toggleLike(postId, isLiked) {
@@ -1129,22 +1015,37 @@ function renderPosts(posts) {
     return;
   }
 
-  container.innerHTML = posts.map(post => `
-    <div class="item">
-      <div class="item-title">${escapeHtml(post.title)}</div>
-      <div class="item-content">${escapeHtml(post.content)}</div>
-      <div class="item-meta">${new Date(post.updatedAt).toLocaleString('zh-tw')}</div>
-      <div class="item-actions">
-        <button onclick="editPost(${post.id}, '${escapeHtml(post.title).replace(/'/g, "\\'")}', '${escapeHtml(post.content).replace(/'/g, "\\'")}')">✏️ 編輯</button>
-        <button class="danger" onclick="deletePost(${post.id})">🗑️ 刪除</button>
+  container.innerHTML = posts.map(post => {
+    let mediaHTML = '';
+    
+    if (post.video) {
+      mediaHTML += `<div style="margin: 10px 0;"><video src="${post.video}" controls style="width: 100%; max-height: 200px; border-radius: 5px;"></video></div>`;
+    }
+    
+    if (post.audio) {
+      mediaHTML += `<div style="margin: 10px 0;"><audio src="${post.audio}" controls style="width: 100%;"></audio></div>`;
+    }
+
+    return `
+      <div class="item">
+        <div class="item-title">${escapeHtml(post.title)}</div>
+        <div class="item-content">${escapeHtml(post.content)}</div>
+        ${mediaHTML}
+        <div class="item-meta">${new Date(post.updatedAt).toLocaleString('zh-tw')}</div>
+        <div class="item-actions">
+          <button onclick="editPost(${post.id}, '${escapeHtml(post.title).replace(/'/g, "\\'")}', '${escapeHtml(post.content).replace(/'/g, "\\'")}')">✏️ 編輯</button>
+          <button class="danger" onclick="deletePost(${post.id})">🗑️ 刪除</button>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 async function addPost() {
   const title = document.getElementById('postTitle').value;
   const content = document.getElementById('postContent').value;
+  const videoInput = document.getElementById('postVideo');
+  const audioInput = document.getElementById('postAudio');
 
   if (!title || !content) {
     alert('請輸入標題和內容');
@@ -1152,24 +1053,68 @@ async function addPost() {
   }
 
   try {
+    let videoData = null;
+    let audioData = null;
+
+    // 處理影片
+    if (videoInput.files.length > 0) {
+      const videoFile = videoInput.files[0];
+      if (videoFile.size > 50 * 1024 * 1024) {
+        alert('影片檔案過大，請選擇小於 50MB 的檔案');
+        return;
+      }
+      videoData = await fileToBase64(videoFile);
+    }
+
+    // 處理音頻
+    if (audioInput.files.length > 0) {
+      const audioFile = audioInput.files[0];
+      if (audioFile.size > 10 * 1024 * 1024) {
+        alert('音頻檔案過大，請選擇小於 10MB 的檔案');
+        return;
+      }
+      audioData = await fileToBase64(audioFile);
+    }
+
+    const postData = {
+      title,
+      content,
+      author: currentUser.username,
+      video: videoData,
+      audio: audioData
+    };
+
     const response = await fetch(`${baseURL}/api/posts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${currentToken}`
       },
-      body: JSON.stringify({ title, content, author: currentUser.username })
+      body: JSON.stringify(postData)
     });
 
     if (response.ok) {
       document.getElementById('postTitle').value = '';
       document.getElementById('postContent').value = '';
+      videoInput.value = '';
+      audioInput.value = '';
+      document.getElementById('mediaPreview').innerHTML = '';
       await loadPosts();
       await loadFeed();
     }
   } catch (error) {
     console.error('發佈文章出錯:', error);
   }
+}
+
+// 將檔案轉換為 Base64
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 async function editPost(id, title, content) {
@@ -1872,6 +1817,89 @@ function updateAvatarPreview() {
   img.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`;
 }
 
+function updateMediaPreview() {
+  const videoInput = document.getElementById('postVideo');
+  const audioInput = document.getElementById('postAudio');
+  const previewContainer = document.getElementById('mediaPreview');
+  
+  if (!previewContainer) return;
+  
+  previewContainer.innerHTML = '';
+  
+  // 影片預覽
+  if (videoInput && videoInput.files.length > 0) {
+    const videoFile = videoInput.files[0];
+    const videoURL = URL.createObjectURL(videoFile);
+    
+    const videoItem = document.createElement('div');
+    videoItem.className = 'media-preview-item';
+    videoItem.innerHTML = `
+      <video src="${videoURL}" controls style="max-width: 200px; max-height: 150px; border-radius: 5px;"></video>
+      <button type="button" class="media-remove-btn" onclick="removeMediaPreview('video')">✕</button>
+    `;
+    previewContainer.appendChild(videoItem);
+  }
+  
+  // 音頻預覽
+  if (audioInput && audioInput.files.length > 0) {
+    const audioFile = audioInput.files[0];
+    const audioURL = URL.createObjectURL(audioFile);
+    
+    const audioItem = document.createElement('div');
+    audioItem.className = 'media-preview-item';
+    audioItem.innerHTML = `
+      <div style="flex: 1;">
+        <div style="font-size: 12px; color: #999; margin-bottom: 5px;">🎵 ${audioFile.name}</div>
+        <audio src="${audioURL}" controls style="max-width: 100%; max-height: 40px;"></audio>
+      </div>
+      <button type="button" class="media-remove-btn" onclick="removeMediaPreview('audio')">✕</button>
+    `;
+    previewContainer.appendChild(audioItem);
+  }
+}
+
+function removeMediaPreview(type) {
+  if (type === 'video') {
+    const videoInput = document.getElementById('postVideo');
+    if (videoInput) videoInput.value = '';
+  } else if (type === 'audio') {
+    const audioInput = document.getElementById('postAudio');
+    if (audioInput) audioInput.value = '';
+  }
+  updateMediaPreview();
+}
+
+// 滑動自動播放音頻
+let currentPlayingAudio = null;
+const audioObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    const audioElement = entry.target.querySelector('.post-audio-element');
+    if (!audioElement) return;
+
+    if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+      // 進入視口且超過50%可見
+      if (currentPlayingAudio && currentPlayingAudio !== audioElement) {
+        currentPlayingAudio.pause();
+      }
+      audioElement.play().catch(err => console.log('自動播放被阻止:', err));
+      currentPlayingAudio = audioElement;
+    } else {
+      // 離開視口或可見比例低於50%
+      if (currentPlayingAudio === audioElement) {
+        audioElement.pause();
+        currentPlayingAudio = null;
+      }
+    }
+  });
+}, {
+  threshold: 0.5 // 50% 可見時觸發
+});
+
+function initScrollAudioPlayback() {
+  const audioContainers = document.querySelectorAll('.post-audio');
+  audioContainers.forEach(container => audioObserver.observe(container));
+}
+
 function showAvatarOptions() {
   const avatars = ['seed1', 'seed2', 'seed3', 'seed4', 'seed5', 'seed6', 'seed7', 'seed8'];
   const options = avatars.map((seed, index) => `${index + 1}`).join(', ');
@@ -1918,6 +1946,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     avatarSelect.addEventListener('change', updateAvatarPreview);
     // 初始化預覽
     updateAvatarPreview();
+  }
+
+  // 添加媒體預覽監聽器
+  const videoInput = document.getElementById('postVideo');
+  if (videoInput) {
+    videoInput.addEventListener('change', updateMediaPreview);
+  }
+  
+  const audioInput = document.getElementById('postAudio');
+  if (audioInput) {
+    audioInput.addEventListener('change', updateMediaPreview);
   }
 
   // 檢查是否已登入
