@@ -826,18 +826,9 @@ function renderFeed(posts) {
   container.innerHTML = posts.map(post => {
     let mediaHTML = '';
     
-    // 影片
-    if (post.video) {
-      mediaHTML += `<video src="${post.video}" controls style="width: 100%; max-height: 300px; border-radius: 8px; margin-bottom: 10px;"></video>`;
-    }
-    
-    // 音頻
-    if (post.audio) {
-      mediaHTML += `
-        <div class="post-audio" data-post-id="${post.id}">
-          <audio src="${post.audio}" class="post-audio-element" style="width: 100%; margin-bottom: 10px;"></audio>
-        </div>
-      `;
+    // 照片
+    if (post.photo) {
+      mediaHTML += `<img src="${post.photo}" alt="貼文圖片" style="width: 100%; max-height: 400px; border-radius: 8px; margin-bottom: 10px; object-fit: cover;">`;
     }
 
     return `
@@ -873,9 +864,6 @@ function renderFeed(posts) {
       </div>
     `;
   }).join('');
-
-  // 初始化滑動音頻播放
-  initScrollAudioPlayback();
 }
 
 async function toggleLike(postId, isLiked) {
@@ -1018,12 +1006,8 @@ function renderPosts(posts) {
   container.innerHTML = posts.map(post => {
     let mediaHTML = '';
     
-    if (post.video) {
-      mediaHTML += `<div style="margin: 10px 0;"><video src="${post.video}" controls style="width: 100%; max-height: 200px; border-radius: 5px;"></video></div>`;
-    }
-    
-    if (post.audio) {
-      mediaHTML += `<div style="margin: 10px 0;"><audio src="${post.audio}" controls style="width: 100%;"></audio></div>`;
+    if (post.photo) {
+      mediaHTML += `<div style="margin: 10px 0;"><img src="${post.photo}" alt="圖片" style="width: 100%; max-height: 200px; border-radius: 5px; object-fit: cover;"></div>`;
     }
 
     return `
@@ -1044,8 +1028,7 @@ function renderPosts(posts) {
 async function addPost() {
   const title = document.getElementById('postTitle').value;
   const content = document.getElementById('postContent').value;
-  const videoInput = document.getElementById('postVideo');
-  const audioInput = document.getElementById('postAudio');
+  const photoInput = document.getElementById('postPhoto');
 
   if (!title || !content) {
     alert('請輸入標題和內容');
@@ -1053,35 +1036,23 @@ async function addPost() {
   }
 
   try {
-    let videoURL = null;
-    let audioURL = null;
+    let photoURL = null;
 
-    // 上傳影片到 Cloudinary
-    if (videoInput && videoInput.files.length > 0) {
-      const videoFile = videoInput.files[0];
-      if (videoFile.size > 50 * 1024 * 1024) {
-        alert('影片檔案過大，請選擇小於 50MB 的檔案');
+    // 上傳照片到 Cloudinary
+    if (photoInput && photoInput.files.length > 0) {
+      const photoFile = photoInput.files[0];
+      if (photoFile.size > 10 * 1024 * 1024) {
+        alert('照片檔案過大，請選擇小於 10MB 的檔案');
         return;
       }
-      videoURL = await uploadToCloudinary(videoFile, 'video');
-    }
-
-    // 上傳音頻到 Cloudinary
-    if (audioInput && audioInput.files.length > 0) {
-      const audioFile = audioInput.files[0];
-      if (audioFile.size > 10 * 1024 * 1024) {
-        alert('音頻檔案過大，請選擇小於 10MB 的檔案');
-        return;
-      }
-      audioURL = await uploadToCloudinary(audioFile, 'audio');
+      photoURL = await uploadToCloudinary(photoFile, 'image');
     }
 
     const postData = {
       title,
       content,
       author: currentUser.username,
-      video: videoURL,
-      audio: audioURL
+      photo: photoURL
     };
 
     const response = await fetch(`${baseURL}/api/posts`, {
@@ -1096,8 +1067,7 @@ async function addPost() {
     if (response.ok) {
       document.getElementById('postTitle').value = '';
       document.getElementById('postContent').value = '';
-      videoInput.value = '';
-      audioInput.value = '';
+      photoInput.value = '';
       document.getElementById('mediaPreview').innerHTML = '';
       await loadPosts();
       await loadFeed();
@@ -1848,86 +1818,34 @@ function updateAvatarPreview() {
 }
 
 function updateMediaPreview() {
-  const videoInput = document.getElementById('postVideo');
-  const audioInput = document.getElementById('postAudio');
+  const photoInput = document.getElementById('postPhoto');
   const previewContainer = document.getElementById('mediaPreview');
   
   if (!previewContainer) return;
   
   previewContainer.innerHTML = '';
   
-  // 影片預覽
-  if (videoInput && videoInput.files.length > 0) {
-    const videoFile = videoInput.files[0];
-    const videoURL = URL.createObjectURL(videoFile);
+  // 照片預覽
+  if (photoInput && photoInput.files.length > 0) {
+    const photoFile = photoInput.files[0];
+    const photoURL = URL.createObjectURL(photoFile);
     
-    const videoItem = document.createElement('div');
-    videoItem.className = 'media-preview-item';
-    videoItem.innerHTML = `
-      <video src="${videoURL}" controls style="max-width: 200px; max-height: 150px; border-radius: 5px;"></video>
-      <button type="button" class="media-remove-btn" onclick="removeMediaPreview('video')">✕</button>
+    const photoItem = document.createElement('div');
+    photoItem.className = 'media-preview-item';
+    photoItem.innerHTML = `
+      <img src="${photoURL}" style="max-width: 200px; max-height: 150px; border-radius: 5px; object-fit: cover;">
+      <button type="button" class="media-remove-btn" onclick="removeMediaPreview('photo')">✕</button>
     `;
-    previewContainer.appendChild(videoItem);
-  }
-  
-  // 音頻預覽
-  if (audioInput && audioInput.files.length > 0) {
-    const audioFile = audioInput.files[0];
-    const audioURL = URL.createObjectURL(audioFile);
-    
-    const audioItem = document.createElement('div');
-    audioItem.className = 'media-preview-item';
-    audioItem.innerHTML = `
-      <div style="flex: 1;">
-        <div style="font-size: 12px; color: #999; margin-bottom: 5px;">🎵 ${audioFile.name}</div>
-        <audio src="${audioURL}" controls style="max-width: 100%; max-height: 40px;"></audio>
-      </div>
-      <button type="button" class="media-remove-btn" onclick="removeMediaPreview('audio')">✕</button>
-    `;
-    previewContainer.appendChild(audioItem);
+    previewContainer.appendChild(photoItem);
   }
 }
 
 function removeMediaPreview(type) {
-  if (type === 'video') {
-    const videoInput = document.getElementById('postVideo');
-    if (videoInput) videoInput.value = '';
-  } else if (type === 'audio') {
-    const audioInput = document.getElementById('postAudio');
-    if (audioInput) audioInput.value = '';
+  if (type === 'photo') {
+    const photoInput = document.getElementById('postPhoto');
+    if (photoInput) photoInput.value = '';
   }
   updateMediaPreview();
-}
-
-// 滑動自動播放音頻
-let currentPlayingAudio = null;
-const audioObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    const audioElement = entry.target.querySelector('.post-audio-element');
-    if (!audioElement) return;
-
-    if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-      // 進入視口且超過50%可見
-      if (currentPlayingAudio && currentPlayingAudio !== audioElement) {
-        currentPlayingAudio.pause();
-      }
-      audioElement.play().catch(err => console.log('自動播放被阻止:', err));
-      currentPlayingAudio = audioElement;
-    } else {
-      // 離開視口或可見比例低於50%
-      if (currentPlayingAudio === audioElement) {
-        audioElement.pause();
-        currentPlayingAudio = null;
-      }
-    }
-  });
-}, {
-  threshold: 0.5 // 50% 可見時觸發
-});
-
-function initScrollAudioPlayback() {
-  const audioContainers = document.querySelectorAll('.post-audio');
-  audioContainers.forEach(container => audioObserver.observe(container));
 }
 
 function showAvatarOptions() {
@@ -1979,14 +1897,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 添加媒體預覽監聽器
-  const videoInput = document.getElementById('postVideo');
-  if (videoInput) {
-    videoInput.addEventListener('change', updateMediaPreview);
-  }
-  
-  const audioInput = document.getElementById('postAudio');
-  if (audioInput) {
-    audioInput.addEventListener('change', updateMediaPreview);
+  const photoInput = document.getElementById('postPhoto');
+  if (photoInput) {
+    photoInput.addEventListener('change', updateMediaPreview);
   }
 
   // 檢查是否已登入

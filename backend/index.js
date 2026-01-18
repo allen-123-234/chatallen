@@ -370,8 +370,7 @@ app.post('/api/posts', verifyToken, (req, res) => {
     content: req.body.content,
     authorId: req.userId,
     author: req.body.author || 'Anonymous',
-    video: req.body.video || null,
-    audio: req.body.audio || null,
+    photo: req.body.photo || null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
