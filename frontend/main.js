@@ -2,7 +2,7 @@
 let baseURL = localStorage.getItem('baseURL') || 
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
     ? 'http://localhost:3000' 
-    : 'https://my-cloud-site.vercel.app'; // 替換成你的實際 Vercel URL
+    : 'https://app-lin-git-main-linjunyuans-projects.vercel.app'; // 你的實際 Vercel URL
 let currentUser = null;
 let currentToken = null;
 let selectedUserId = null;
@@ -1092,7 +1092,7 @@ function connectWebSocket() {
   const hostname = window.location.hostname || 'localhost';
   const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
   const protocol = isLocal ? 'ws' : 'wss';
-  const wsHost = isLocal ? `${hostname}:3000` : 'my-cloud-site.vercel.app'; // 替換成你的實際 Vercel URL
+  const wsHost = isLocal ? `${hostname}:3000` : 'app-lin-git-main-linjunyuans-projects.vercel.app'; // 你的實際 Vercel URL
   const wsURL = `${protocol}://${wsHost}?token=${currentToken}`;
   try {
     ws = new WebSocket(wsURL);
