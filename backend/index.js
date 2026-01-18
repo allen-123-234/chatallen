@@ -11,8 +11,9 @@ const dbDir = path.join(__dirname, 'db');
 
 // 中間件
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, '../frontend')));
+// 增加 JSON 解析限制以支援 Base64 圖片
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // 確保 db 目錄存在
 if (!fs.existsSync(dbDir)) {
@@ -26,33 +27,6 @@ const messagesFile = path.join(dbDir, 'messages.json');
 const followsFile = path.join(dbDir, 'follows.json');
 const likesFile = path.join(dbDir, 'likes.json');
 const commentsFile = path.join(dbDir, 'comments.json');
-const notificationsFile = path.join(dbDir, 'notifications.json');
-
-// 初始化官方管理帳號
-function initializeAdminAccount() {
-  const users = readJSON(usersFile);
-  const adminExists = users.some(u => u.username === 'allen');
-  
-  if (!adminExists) {
-    const adminUser = {
-      id: 'admin-' + Date.now(),
-      username: 'allen',
-      password: 'allen0728', // 實際應用中應該加密
-      email: 'admin@cloudsite.com',
-      avatar: 'https://picsum.photos/seed/admin/200/200.jpg',
-      bio: '超級管理員',
-      isAdmin: true,
-      createdAt: new Date().toISOString()
-    };
-    
-    users.push(adminUser);
-    writeJSON(usersFile, users);
-    console.log('✅ 超級管理員帳號已創建: allen/allen0728');
-  }
-}
-
-// 初始化管理員帳號
-initializeAdminAccount();
 
 // 使用者 Token 存儲（簡單實現）
 const activeTokens = new Set();
@@ -65,63 +39,14 @@ app.post('/api/auth/verify-token', (req, res) => {
   }
   
   // 令牌格式檢查 (userId-timestamp)
-  const lastDashIndex = token.lastIndexOf('-');
-  if (lastDashIndex === -1) {
+  const parts = token.split('-');
+  if (parts.length < 2) {
     return res.status(401).json({ error: 'Token 格式無效' });
   }
   
   // Token 有效（格式正確），添加到 activeTokens
   activeTokens.add(token);
-  const users = readJSON(usersFile);
-  const userId = token.slice(0, lastDashIndex);
-  const user = users.find(u => u.id === userId);
-  if (!user) {
-    return res.status(401).json({ error: 'Token 對應用戶不存在' });
-  }
-
-  res.json({
-    valid: true,
-    user: {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      avatar: user.avatar,
-      isAdmin: !!user.isAdmin
-    }
-  });
-});
-
-// 相容舊版前端：/api/auth/verify
-app.post('/api/auth/verify', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(400).json({ error: '沒有 Token' });
-  }
-
-  // 直接沿用 verify-token 邏輯
-  const lastDashIndex = token.lastIndexOf('-');
-  if (lastDashIndex === -1) {
-    return res.status(401).json({ error: 'Token 格式無效' });
-  }
-
-  activeTokens.add(token);
-  const users = readJSON(usersFile);
-  const userId = token.slice(0, lastDashIndex);
-  const user = users.find(u => u.id === userId);
-  if (!user) {
-    return res.status(401).json({ error: 'Token 對應用戶不存在' });
-  }
-
-  res.json({
-    valid: true,
-    user: {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      avatar: user.avatar,
-      isAdmin: !!user.isAdmin
-    }
-  });
+  res.json({ valid: true });
 });
 
 // 初始化資料檔案
@@ -134,7 +59,6 @@ function initializeFiles() {
       email: 'admin@official.com',
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ab',
       bio: '官方管理帳號',
-      isAdmin: true,
       createdAt: new Date().toISOString()
     };
     fs.writeFileSync(usersFile, JSON.stringify([adminUser], null, 2));
@@ -180,11 +104,7 @@ function verifyToken(req, res, next) {
     return res.status(401).json({ error: '未授權' });
   }
   req.token = token;
-  const lastDashIndex = token.lastIndexOf('-');
-  if (lastDashIndex === -1) {
-    return res.status(401).json({ error: 'Token 格式無效' });
-  }
-  req.userId = token.slice(0, lastDashIndex); // Token 格式：userId-timestamp（userId 允許包含 - ）
+  req.userId = token.split('-')[0]; // Token 格式：userId-timestamp
   next();
 }
 
@@ -251,8 +171,7 @@ app.post('/api/auth/login', (req, res) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      avatar: user.avatar,
-      isAdmin: !!user.isAdmin
+      avatar: user.avatar
     }
   });
 });
@@ -342,8 +261,20 @@ app.put('/api/users/:id', verifyToken, (req, res) => {
   
   // 允許更新 bio、avatar、email
   user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
-  user.avatar = req.body.avatar !== undefined ? req.body.avatar : user.avatar;
   user.email = req.body.email !== undefined ? req.body.email : user.email;
+  
+  // 處理 avatar 更新 - 驗證 Base64 大小
+  if (req.body.avatar !== undefined) {
+    // 如果是 Base64 圖片（長度超過 100），驗證大小
+    if (req.body.avatar.startsWith('data:image')) {
+      const base64Size = Buffer.byteLength(req.body.avatar, 'utf8');
+      // 限制為 3MB
+      if (base64Size > 3 * 1024 * 1024) {
+        return res.status(413).json({ error: '圖片檔案過大，請使用小於 3MB 的圖片' });
+      }
+    }
+    user.avatar = req.body.avatar;
+  }
   
   writeJSON(usersFile, users);
   
@@ -370,7 +301,6 @@ app.post('/api/posts', verifyToken, (req, res) => {
     content: req.body.content,
     authorId: req.userId,
     author: req.body.author || 'Anonymous',
-    photo: req.body.photo || null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -477,39 +407,28 @@ app.delete('/api/follow/:userId', verifyToken, (req, res) => {
 
 // ==================== 點讚系統 ====================
 
-// 按讚貼文
-app.post('/api/posts/:postId/like', verifyToken, (req, res) => {
+// 點讚
+app.post('/api/posts/:id/like', verifyToken, (req, res) => {
   const posts = readJSON(postsFile);
-  const likes = readJSON(likesFile);
-  const users = readJSON(usersFile);
-  
-  const post = posts.find(p => p.id == req.params.postId);
-  if (!post) return res.status(404).json({ error: '貼文未找到' });
-  
-  const userId = req.userId;
-  const existingLike = likes.find(l => l.postId === post.id && l.userId === userId);
-  
-  if (existingLike) {
-    // 取消按讚
-    likes.splice(likes.indexOf(existingLike), 1);
-  } else {
-    // 按讚
-    likes.push({
-      id: Date.now().toString(),
-      postId: post.id,
-      userId,
-      createdAt: new Date().toISOString()
-    });
-    
-    // 創建通知給貼文作者（如果不是自己按讚）
-    if (post.authorId !== userId) {
-      const liker = users.find(u => u.id === userId);
-      createNotification(post.authorId, `${liker.username} 按讚了你的貼文「${post.title}」`, 'like');
-    }
+  if (!posts.find(p => p.id == req.params.id)) {
+    return res.status(404).json({ error: '貼文未找到' });
   }
   
+  const likes = readJSON(likesFile);
+  
+  if (likes.some(l => l.postId == req.params.id && l.userId === req.userId)) {
+    return res.status(400).json({ error: '已點讚' });
+  }
+  
+  likes.push({
+    id: Date.now(),
+    postId: req.params.id,
+    userId: req.userId,
+    createdAt: new Date().toISOString()
+  });
+  
   writeJSON(likesFile, likes);
-  res.json({ liked: !existingLike });
+  res.json({ message: '已點讚' });
 });
 
 // 取消點讚
@@ -630,412 +549,6 @@ app.put('/api/messages/:messageId/read', verifyToken, (req, res) => {
   message.isRead = true;
   writeJSON(messagesFile, messages);
   res.json(message);
-});
-
-// 刪除訊息（收回功能）
-app.delete('/api/messages/:messageId', verifyToken, (req, res) => {
-  const messages = readJSON(messagesFile);
-  const messageIndex = messages.findIndex(m => m.id == req.params.messageId);
-  
-  if (messageIndex === -1) {
-    return res.status(404).json({ error: '訊息未找到' });
-  }
-  
-  const message = messages[messageIndex];
-  
-  // 只允許發送者刪除自己的訊息
-  if (message.senderId !== req.userId) {
-    return res.status(403).json({ error: '只能刪除自己的訊息' });
-  }
-  
-  // 刪除訊息
-  messages.splice(messageIndex, 1);
-  writeJSON(messagesFile, messages);
-  
-  res.json({ success: true });
-});
-
-// 按讚訊息
-app.post('/api/messages/:messageId/like', verifyToken, (req, res) => {
-  const messages = readJSON(messagesFile);
-  const message = messages.find(m => m.id == req.params.messageId);
-  
-  if (!message) {
-    return res.status(404).json({ error: '訊息未找到' });
-  }
-  
-  // 初始化按讚數據
-  if (!message.likes) {
-    message.likes = [];
-  }
-  
-  const userId = req.userId;
-  const likeIndex = message.likes.indexOf(userId);
-  
-  if (likeIndex === -1) {
-    // 按讚
-    message.likes.push(userId);
-  } else {
-    // 取消按讚
-    message.likes.splice(likeIndex, 1);
-  }
-  
-  writeJSON(messagesFile, messages);
-  
-  res.json({ 
-    liked: likeIndex === -1,
-    likesCount: message.likes.length
-  });
-});
-
-// ==================== 管理員 API ====================
-
-// 檢查是否為管理員
-function checkAdmin(req, res, next) {
-  const users = readJSON(usersFile);
-  const user = users.find(u => u.id === req.userId);
-  
-  if (!user || !user.isAdmin) {
-    return res.status(403).json({ error: '需要管理員權限' });
-  }
-  
-  next();
-}
-
-// 獲取所有用戶
-app.get('/api/admin/users', verifyToken, checkAdmin, (req, res) => {
-  const users = readJSON(usersFile);
-  const follows = readJSON(followsFile);
-  const posts = readJSON(postsFile);
-  
-  const usersWithStats = users.map(u => ({
-    id: u.id,
-    username: u.username,
-    email: u.email,
-    avatar: u.avatar,
-    bio: u.bio,
-    isAdmin: u.isAdmin,
-    createdAt: u.createdAt,
-    postsCount: posts.filter(p => p.authorId === u.id).length,
-    followersCount: follows.filter(f => f.followingId === u.id).length,
-    followingCount: follows.filter(f => f.followerId === u.id).length
-  }));
-  
-  res.json(usersWithStats);
-});
-
-// 刪除用戶
-app.delete('/api/admin/users/:userId', verifyToken, checkAdmin, (req, res) => {
-  const users = readJSON(usersFile);
-  const posts = readJSON(postsFile);
-  const follows = readJSON(followsFile);
-  const likes = readJSON(likesFile);
-  const comments = readJSON(commentsFile);
-  const messages = readJSON(messagesFile);
-  const notifications = readJSON(notificationsFile);
-  
-  const userId = req.params.userId;
-  const currentUser = users.find(u => u.id === req.userId);
-  
-  // 不能刪除自己
-  if (userId === req.userId) {
-    return res.status(403).json({ error: '不能刪除自己' });
-  }
-  
-  // 只有超級管理員才能刪除其他管理員（第一個管理員）
-  const userToDelete = users.find(u => u.id === userId);
-  if (!userToDelete) {
-    return res.status(404).json({ error: '用戶未找到' });
-  }
-  
-  if (userToDelete.isAdmin && currentUser.username !== 'allen') {
-    return res.status(403).json({ error: '只有超級管理員才能刪除其他管理員' });
-  }
-  
-  // 刪除用戶的所有數據
-  const filteredUsers = users.filter(u => u.id !== userId);
-  const filteredPosts = posts.filter(p => p.authorId !== userId);
-  const filteredFollows = follows.filter(f => f.followerId !== userId && f.followingId !== userId);
-  const filteredLikes = likes.filter(l => l.userId !== userId);
-  const filteredComments = comments.filter(c => c.userId !== userId);
-  const filteredMessages = messages.filter(m => m.senderId !== userId && m.recipientId !== userId);
-  const filteredNotifications = notifications.filter(n => n.userId !== userId);
-  
-  writeJSON(usersFile, filteredUsers);
-  writeJSON(postsFile, filteredPosts);
-  writeJSON(followsFile, filteredFollows);
-  writeJSON(likesFile, filteredLikes);
-  writeJSON(commentsFile, filteredComments);
-  writeJSON(messagesFile, filteredMessages);
-  writeJSON(notificationsFile, filteredNotifications);
-  
-  res.json({ success: true, message: `用戶 ${userToDelete.username} 已刪除` });
-});
-
-// 刪除文章
-app.delete('/api/admin/posts/:postId', verifyToken, checkAdmin, (req, res) => {
-  const posts = readJSON(postsFile);
-  const likes = readJSON(likesFile);
-  const comments = readJSON(commentsFile);
-  
-  const postId = req.params.postId;
-  
-  // 刪除文章
-  const filteredPosts = posts.filter(p => p.id != postId);
-  const filteredLikes = likes.filter(l => l.postId != postId);
-  const filteredComments = comments.filter(c => c.postId != postId);
-  
-  writeJSON(postsFile, filteredPosts);
-  writeJSON(likesFile, filteredLikes);
-  writeJSON(commentsFile, filteredComments);
-  
-  res.json({ success: true, message: '文章已刪除' });
-});
-
-// 清除所有數據（超級管理員專用）
-app.delete('/api/admin/clear-all', verifyToken, checkAdmin, (req, res) => {
-  const users = readJSON(usersFile);
-  const posts = readJSON(postsFile);
-  const follows = readJSON(followsFile);
-  const likes = readJSON(likesFile);
-  const comments = readJSON(commentsFile);
-  const messages = readJSON(messagesFile);
-  const notifications = readJSON(notificationsFile);
-  
-  // 清除所有數據（除了超級管理員）
-  const superAdmin = users.find(u => u.username === 'allen');
-  if (!superAdmin) {
-    return res.status(403).json({ error: '只有超級管理員才能清除所有數據' });
-  }
-  
-  // 保留超級管理員和普通管理員的帳號
-  const adminUsers = users.filter(u => u.isAdmin);
-  const filteredUsers = users.filter(u => !u.isAdmin);
-  
-  // 清除普通用戶的所有數據
-  const filteredUserIds = filteredUsers.map(u => u.id);
-  
-  const finalUsers = [...adminUsers, superAdmin]; // 保留所有管理員
-  const finalPosts = posts.filter(p => !filteredUserIds.includes(p.authorId));
-  const finalFollows = follows.filter(f => !filteredUserIds.includes(f.followerId) && !filteredUserIds.includes(f.followingId));
-  const finalLikes = likes.filter(l => !filteredUserIds.includes(l.userId));
-  const finalComments = comments.filter(c => !filteredUserIds.includes(c.userId));
-  const finalMessages = messages.filter(m => !filteredUserIds.includes(m.senderId) && !filteredUserIds.includes(m.recipientId));
-  const finalNotifications = notifications.filter(n => !filteredUserIds.includes(n.userId));
-  
-  // 寫入清空後的數據
-  writeJSON(usersFile, finalUsers);
-  writeJSON(postsFile, finalPosts);
-  writeJSON(followsFile, finalFollows);
-  writeJSON(likesFile, finalLikes);
-  writeJSON(commentsFile, finalComments);
-  writeJSON(messagesFile, finalMessages);
-  writeJSON(notificationsFile, finalNotifications);
-  
-  res.json({ 
-    success: true, 
-    message: '已清除所有普通用戶數據',
-    stats: {
-      usersKept: finalUsers.length,
-      usersDeleted: filteredUsers.length,
-      postsDeleted: posts.length - finalPosts.length,
-      commentsDeleted: comments.length - finalComments.length,
-      messagesDeleted: messages.length - finalMessages.length
-    }
-  });
-});
-
-// 清除所有數據（超級管理員專用）
-app.delete('/api/admin/clear-all', verifyToken, checkAdmin, (req, res) => {
-  const users = readJSON(usersFile);
-  const posts = readJSON(postsFile);
-  const follows = readJSON(followsFile);
-  const likes = readJSON(likesFile);
-  const comments = readJSON(commentsFile);
-  const messages = readJSON(messagesFile);
-  const notifications = readJSON(notificationsFile);
-  
-  // 檢查是否為超級管理員
-  const superAdmin = users.find(u => u.username === 'allen');
-  if (!superAdmin) {
-    return res.status(403).json({ error: '只有超級管理員才能清除所有數據' });
-  }
-  
-  // 保留超級管理員和普通管理員的帳號
-  const adminUsers = users.filter(u => u.isAdmin);
-  const filteredUsers = users.filter(u => !u.isAdmin);
-  
-  // 清除普通用戶的所有數據
-  const filteredUserIds = filteredUsers.map(u => u.id);
-  const finalUsers = [...adminUsers, superAdmin];
-  
-  const finalPosts = posts.filter(p => !filteredUserIds.includes(p.authorId));
-  const finalFollows = follows.filter(f => !filteredUserIds.includes(f.followerId) && !filteredUserIds.includes(f.followingId));
-  const finalLikes = likes.filter(l => !filteredUserIds.includes(l.userId));
-  const finalComments = comments.filter(c => !filteredUserIds.includes(c.userId));
-  const finalMessages = messages.filter(m => !filteredUserIds.includes(m.senderId) && !filteredUserIds.includes(m.recipientId));
-  const finalNotifications = notifications.filter(n => !filteredUserIds.includes(n.userId));
-  
-  // 寫入清理後的數據
-  writeJSON(usersFile, finalUsers);
-  writeJSON(postsFile, finalPosts);
-  writeJSON(followsFile, finalFollows);
-  writeJSON(likesFile, finalLikes);
-  writeJSON(commentsFile, finalComments);
-  writeJSON(messagesFile, finalMessages);
-  writeJSON(notificationsFile, finalNotifications);
-  
-  res.json({ 
-    success: true, 
-    message: '已清除所有普通用戶數據',
-    stats: {
-      usersKept: finalUsers.length,
-      usersDeleted: filteredUsers.length,
-      postsDeleted: posts.length - finalPosts.length,
-      commentsDeleted: comments.length - finalComments.length,
-      messagesDeleted: messages.length - finalMessages.length,
-      notificationsDeleted: notifications.length - finalNotifications.length
-    }
-  });
-});
-
-// 獲取用戶的粉絲列表
-app.get('/api/users/:userId/followers', verifyToken, (req, res) => {
-  const follows = readJSON(followsFile);
-  const users = readJSON(usersFile);
-  const followers = follows
-    .filter(f => f.followingId === req.params.userId)
-    .map(f => {
-      const user = users.find(u => u.id === f.followerId);
-      return {
-        id: user.id,
-        username: user.username,
-        avatar: user.avatar,
-        bio: user.bio || '',
-        followedAt: f.createdAt
-      };
-    });
-  
-  res.json(followers);
-});
-
-// 獲取用戶的追蹤列表
-app.get('/api/users/:userId/following', verifyToken, (req, res) => {
-  const follows = readJSON(followsFile);
-  const users = readJSON(usersFile);
-  const following = follows
-    .filter(f => f.followerId === req.params.userId)
-    .map(f => {
-      const user = users.find(u => u.id === f.followingId);
-      return {
-        id: user.id,
-        username: user.username,
-        avatar: user.avatar,
-        bio: user.bio || '',
-        followedAt: f.createdAt
-      };
-    });
-  
-  res.json(following);
-});
-
-// ==================== Notifications API ====================
-
-// 獲取用戶通知
-app.get('/api/notifications', verifyToken, (req, res) => {
-  const notifications = readJSON(notificationsFile);
-  const userNotifications = notifications
-    .filter(n => n.userId === req.userId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
-  res.json(userNotifications);
-});
-
-// 標記通知為已讀
-app.put('/api/notifications/:notificationId/read', verifyToken, (req, res) => {
-  const notifications = readJSON(notificationsFile);
-  const notification = notifications.find(n => n.id == req.params.notificationId);
-  
-  if (!notification) {
-    return res.status(404).json({ error: '通知未找到' });
-  }
-  
-  if (notification.userId !== req.userId) {
-    return res.status(403).json({ error: '無權限' });
-  }
-  
-  notification.read = true;
-  writeJSON(notificationsFile, notifications);
-  
-  res.json({ success: true });
-});
-
-// 清除所有通知
-app.delete('/api/notifications', verifyToken, (req, res) => {
-  const notifications = readJSON(notificationsFile);
-  const filteredNotifications = notifications.filter(n => n.userId !== req.userId);
-  
-  writeJSON(notificationsFile, filteredNotifications);
-  
-  res.json({ success: true });
-});
-
-// 創建通知（內部函數）
-function createNotification(userId, content, type = 'follow') {
-  const notifications = readJSON(notificationsFile);
-  const notification = {
-    id: Date.now().toString(),
-    userId,
-    content,
-    type,
-    read: false,
-    createdAt: new Date().toISOString()
-  };
-  
-  notifications.push(notification);
-  writeJSON(notificationsFile, notifications);
-  
-  return notification;
-}
-
-// 修改追蹤API以添加通知
-app.post('/api/follow/:userId', verifyToken, (req, res) => {
-  const follows = readJSON(followsFile);
-  const users = readJSON(usersFile);
-  
-  const followerId = req.userId;
-  const followingId = req.params.userId;
-  
-  if (followerId === followingId) {
-    return res.status(400).json({ error: '不能追蹤自己' });
-  }
-  
-  // 檢查是否已經追蹤
-  const existingFollow = follows.find(f => 
-    f.followerId === followerId && f.followingId === followingId
-  );
-  
-  if (existingFollow) {
-    return res.status(400).json({ error: '已經追蹤了' });
-  }
-  
-  // 添加追蹤記錄
-  follows.push({
-    id: Date.now().toString(),
-    followerId,
-    followingId,
-    createdAt: new Date().toISOString()
-  });
-  
-  writeJSON(followsFile, follows);
-  
-  // 獲取追蹤者信息
-  const follower = users.find(u => u.id === followerId);
-  
-  // 創建通知給被追蹤者
-  createNotification(followingId, `${follower.username} 開始追蹤你了！`, 'follow');
-  
-  res.json({ success: true });
 });
 
 // 獲取對話列表（最近的對話）

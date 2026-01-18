@@ -823,47 +823,37 @@ function renderFeed(posts) {
     return;
   }
 
-  container.innerHTML = posts.map(post => {
-    let mediaHTML = '';
-    
-    // 照片
-    if (post.photo) {
-      mediaHTML += `<img src="${post.photo}" alt="貼文圖片" style="width: 100%; max-height: 400px; border-radius: 8px; margin-bottom: 10px; object-fit: cover;">`;
-    }
-
-    return `
-      <div class="post-card" data-post-id="${post.id}">
-        <div class="post-header">
-          <img src="${post.authorAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}" alt="" class="post-author-avatar">
-          <div class="post-author-info">
-            <div class="post-author-name">${escapeHtml(post.author)}</div>
-            <div class="post-time">${new Date(post.createdAt).toLocaleString('zh-tw')}</div>
-          </div>
-        </div>
-
-        <div class="post-body">
-          <div class="post-title">${escapeHtml(post.title)}</div>
-          <div class="post-content">${escapeHtml(post.content)}</div>
-          ${mediaHTML}
-        </div>
-
-        <div class="post-actions">
-          <button class="post-action-btn ${post.isLiked ? 'liked' : ''}" onclick="toggleLike(${post.id}, ${post.isLiked})">
-            ${post.isLiked ? '❤️' : '🤍'} ${post.likeCount}
-          </button>
-          <button class="post-action-btn" onclick="toggleComments(${post.id})">
-            💬 留言
-          </button>
-        </div>
-
-        <div class="post-comments" id="comments-${post.id}" style="display: none;"></div>
-        <div class="comment-input-group" id="comment-input-${post.id}" style="display: none;">
-          <input type="text" placeholder="新增留言..." class="comment-input">
-          <button onclick="addComment(${post.id})">發送</button>
+  container.innerHTML = posts.map(post => `
+    <div class="post-card">
+      <div class="post-header">
+        <img src="${post.authorAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}" alt="" class="post-author-avatar">
+        <div class="post-author-info">
+          <div class="post-author-name">${escapeHtml(post.author)}</div>
+          <div class="post-time">${new Date(post.createdAt).toLocaleString('zh-tw')}</div>
         </div>
       </div>
-    `;
-  }).join('');
+
+      <div class="post-body">
+        <div class="post-title">${escapeHtml(post.title)}</div>
+        <div class="post-content">${escapeHtml(post.content)}</div>
+      </div>
+
+      <div class="post-actions">
+        <button class="post-action-btn ${post.isLiked ? 'liked' : ''}" onclick="toggleLike(${post.id}, ${post.isLiked})">
+          ${post.isLiked ? '❤️' : '🤍'} ${post.likeCount}
+        </button>
+        <button class="post-action-btn" onclick="toggleComments(${post.id})">
+          💬 留言
+        </button>
+      </div>
+
+      <div class="post-comments" id="comments-${post.id}" style="display: none;"></div>
+      <div class="comment-input-group" id="comment-input-${post.id}" style="display: none;">
+        <input type="text" placeholder="新增留言..." class="comment-input">
+        <button onclick="addComment(${post.id})">發送</button>
+      </div>
+    </div>
+  `).join('');
 }
 
 async function toggleLike(postId, isLiked) {
@@ -1003,32 +993,22 @@ function renderPosts(posts) {
     return;
   }
 
-  container.innerHTML = posts.map(post => {
-    let mediaHTML = '';
-    
-    if (post.photo) {
-      mediaHTML += `<div style="margin: 10px 0;"><img src="${post.photo}" alt="圖片" style="width: 100%; max-height: 200px; border-radius: 5px; object-fit: cover;"></div>`;
-    }
-
-    return `
-      <div class="item">
-        <div class="item-title">${escapeHtml(post.title)}</div>
-        <div class="item-content">${escapeHtml(post.content)}</div>
-        ${mediaHTML}
-        <div class="item-meta">${new Date(post.updatedAt).toLocaleString('zh-tw')}</div>
-        <div class="item-actions">
-          <button onclick="editPost(${post.id}, '${escapeHtml(post.title).replace(/'/g, "\\'")}', '${escapeHtml(post.content).replace(/'/g, "\\'")}')">✏️ 編輯</button>
-          <button class="danger" onclick="deletePost(${post.id})">🗑️ 刪除</button>
-        </div>
+  container.innerHTML = posts.map(post => `
+    <div class="item">
+      <div class="item-title">${escapeHtml(post.title)}</div>
+      <div class="item-content">${escapeHtml(post.content)}</div>
+      <div class="item-meta">${new Date(post.updatedAt).toLocaleString('zh-tw')}</div>
+      <div class="item-actions">
+        <button onclick="editPost(${post.id}, '${escapeHtml(post.title).replace(/'/g, "\\'")}', '${escapeHtml(post.content).replace(/'/g, "\\'")}')">✏️ 編輯</button>
+        <button class="danger" onclick="deletePost(${post.id})">🗑️ 刪除</button>
       </div>
-    `;
-  }).join('');
+    </div>
+  `).join('');
 }
 
 async function addPost() {
   const title = document.getElementById('postTitle').value;
   const content = document.getElementById('postContent').value;
-  const photoInput = document.getElementById('postPhoto');
 
   if (!title || !content) {
     alert('請輸入標題和內容');
@@ -1036,85 +1016,24 @@ async function addPost() {
   }
 
   try {
-    let photoURL = null;
-
-    // 上傳照片到 Cloudinary
-    if (photoInput && photoInput.files.length > 0) {
-      const photoFile = photoInput.files[0];
-      if (photoFile.size > 10 * 1024 * 1024) {
-        alert('照片檔案過大，請選擇小於 10MB 的檔案');
-        return;
-      }
-      photoURL = await uploadToCloudinary(photoFile, 'image');
-    }
-
-    const postData = {
-      title,
-      content,
-      author: currentUser.username,
-      photo: photoURL
-    };
-
     const response = await fetch(`${baseURL}/api/posts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${currentToken}`
       },
-      body: JSON.stringify(postData)
+      body: JSON.stringify({ title, content, author: currentUser.username })
     });
 
     if (response.ok) {
       document.getElementById('postTitle').value = '';
       document.getElementById('postContent').value = '';
-      photoInput.value = '';
-      document.getElementById('mediaPreview').innerHTML = '';
       await loadPosts();
       await loadFeed();
-    } else {
-      const error = await response.json();
-      alert(`發佈失敗: ${error.error || '未知錯誤'}`);
     }
   } catch (error) {
     console.error('發佈文章出錯:', error);
-    alert('發佈失敗，請重試');
   }
-}
-
-// Cloudinary 上傳函數
-async function uploadToCloudinary(file, resourceType) {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', 'my_cloud_site'); // 公開上傳預設
-  formData.append('cloud_name', 'dvansd2ej');
-
-  try {
-    const response = await fetch('https://api.cloudinary.com/v1_1/dvansd2ej/auto/upload', {
-      method: 'POST',
-      body: formData
-    });
-
-    const data = await response.json();
-    if (data.secure_url) {
-      return data.secure_url;
-    } else {
-      throw new Error('Cloudinary 上傳失敗');
-    }
-  } catch (error) {
-    console.error('Cloudinary 上傳錯誤:', error);
-    alert(`${resourceType === 'video' ? '影片' : '音頻'} 上傳失敗，請重試`);
-    throw error;
-  }
-}
-
-// 將檔案轉換為 Base64（保留備用）
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 async function editPost(id, title, content) {
@@ -1817,37 +1736,6 @@ function updateAvatarPreview() {
   img.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`;
 }
 
-function updateMediaPreview() {
-  const photoInput = document.getElementById('postPhoto');
-  const previewContainer = document.getElementById('mediaPreview');
-  
-  if (!previewContainer) return;
-  
-  previewContainer.innerHTML = '';
-  
-  // 照片預覽
-  if (photoInput && photoInput.files.length > 0) {
-    const photoFile = photoInput.files[0];
-    const photoURL = URL.createObjectURL(photoFile);
-    
-    const photoItem = document.createElement('div');
-    photoItem.className = 'media-preview-item';
-    photoItem.innerHTML = `
-      <img src="${photoURL}" style="max-width: 200px; max-height: 150px; border-radius: 5px; object-fit: cover;">
-      <button type="button" class="media-remove-btn" onclick="removeMediaPreview('photo')">✕</button>
-    `;
-    previewContainer.appendChild(photoItem);
-  }
-}
-
-function removeMediaPreview(type) {
-  if (type === 'photo') {
-    const photoInput = document.getElementById('postPhoto');
-    if (photoInput) photoInput.value = '';
-  }
-  updateMediaPreview();
-}
-
 function showAvatarOptions() {
   const avatars = ['seed1', 'seed2', 'seed3', 'seed4', 'seed5', 'seed6', 'seed7', 'seed8'];
   const options = avatars.map((seed, index) => `${index + 1}`).join(', ');
@@ -1884,8 +1772,16 @@ async function changeAvatar(avatarSeed) {
   }
 }
 
-// ==================== 初始化 ====================
+// ==================== 檔案上傳頭像 ====================
+let selectedAvatarFile = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
+  // 添加檔案上傳監聽器
+  const avatarFileInput = document.getElementById('avatarFileInput');
+  if (avatarFileInput) {
+    avatarFileInput.addEventListener('change', handleAvatarFileSelect);
+  }
+});
   console.log('📄 頁面加載開始');
   
   // 添加頭像選擇監聽器
@@ -1894,12 +1790,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     avatarSelect.addEventListener('change', updateAvatarPreview);
     // 初始化預覽
     updateAvatarPreview();
-  }
-
-  // 添加媒體預覽監聽器
-  const photoInput = document.getElementById('postPhoto');
-  if (photoInput) {
-    photoInput.addEventListener('change', updateMediaPreview);
   }
 
   // 檢查是否已登入
@@ -1986,4 +1876,102 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('✨ 未登入，顯示登入頁面');
     showAuthPage();
   }
-});
+;
+
+// 處理頭像檔案選擇
+function handleAvatarFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // 驗證檔案大小 (5MB)
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    alert('檔案過大，請選擇小於 5MB 的檔案');
+    return;
+  }
+
+  // 驗證檔案類型
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    alert('不支援此檔案格式，請選擇 JPG, PNG, GIF 或 WebP');
+    return;
+  }
+
+  selectedAvatarFile = file;
+
+  // 讀取檔案並顯示預覽
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('avatarPreview');
+    const previewImg = document.getElementById('customAvatarPreview');
+    if (preview && previewImg) {
+      previewImg.src = e.target.result;
+      preview.style.display = 'block';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function cancelAvatarUpload() {
+  selectedAvatarFile = null;
+  const fileInput = document.getElementById('avatarFileInput');
+  const preview = document.getElementById('avatarPreview');
+  if (fileInput) fileInput.value = '';
+  if (preview) preview.style.display = 'none';
+}
+
+async function confirmAvatarUpload() {
+  if (!selectedAvatarFile) {
+    alert('請先選擇頭像檔案');
+    return;
+  }
+
+  if (!currentUser || !currentToken) {
+    alert('請先登入');
+    return;
+  }
+
+  try {
+    // 轉換檔案為 Base64
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64Avatar = e.target.result;
+
+      try {
+        const response = await fetch(`${baseURL}/api/users/${currentUser.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentToken}`
+          },
+          body: JSON.stringify({ avatar: base64Avatar })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          currentUser.avatar = data.avatar;
+          localStorage.setItem('user', JSON.stringify(currentUser));
+          
+          const userAvatarImg = document.getElementById('userAvatar');
+          if (userAvatarImg) {
+            userAvatarImg.src = base64Avatar;
+          }
+          
+          cancelAvatarUpload();
+          alert('頭像已成功更新！');
+          loadUserProfile(currentUser.id);
+        } else {
+          const error = await response.json();
+          alert('上傳失敗：' + (error.message || '未知錯誤'));
+        }
+      } catch (error) {
+        console.error('上傳頭像失敗:', error);
+        alert('上傳失敗，請稍後重試');
+      }
+    };
+    reader.readAsDataURL(selectedAvatarFile);
+  } catch (error) {
+    console.error('處理檔案失敗:', error);
+    alert('處理檔案失敗');
+  }
+}
