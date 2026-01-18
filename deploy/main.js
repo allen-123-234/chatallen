@@ -1,7 +1,8 @@
 // 配置
-let baseURL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:3000' 
-  : `https://${window.location.hostname}`;
+let baseURL = localStorage.getItem('baseURL') || 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+    ? 'http://localhost:3000' 
+    : 'https://app-lin-git-main-linjunyuans-projects.vercel.app'; // 後端 API (Vercel)
 let currentUser = null;
 let currentToken = null;
 let selectedUserId = null;
@@ -1087,12 +1088,12 @@ function connectWebSocket() {
     return;
   }
 
-  // 確保主機名有效
+  // 根據環境決定 WebSocket URL
   const hostname = window.location.hostname || 'localhost';
-  const isLocal = hostname === 'localhost';
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
   const protocol = isLocal ? 'ws' : 'wss';
-  const port = isLocal ? ':3000' : '';
-  const wsURL = `${protocol}://${hostname}${port}?token=${currentToken}`;
+  const wsHost = isLocal ? `${hostname}:3000` : 'app-lin-git-main-linjunyuans-projects.vercel.app'; // 你的實際 Vercel URL
+  const wsURL = `${protocol}://${wsHost}?token=${currentToken}`;
   try {
     ws = new WebSocket(wsURL);
 

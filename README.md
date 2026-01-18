@@ -304,6 +304,77 @@ curl http://localhost:3000/api/users/search/alice \
    - 點擊「發送訊息」
    - 訊息即時出現在聊天區域
 
+## 🚀 Railway 部署指南
+
+### 1. 準備 GitHub 儲存庫
+
+```bash
+# 初始化 Git
+git init
+git add .
+git commit -m "Initial commit: My Cloud Site - Instagram Clone"
+
+# 連接到 GitHub
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/my-cloud-site.git
+git push -u origin main
+```
+
+### 2. 部署到 Railway
+
+1. **創建 Railway 帳號**
+   - 訪問 [railway.app](https://railway.app)
+   - 用 GitHub 帳號登入
+
+2. **創建新專案**
+   - 點擊 "New Project"
+   - 選擇 "Deploy from GitHub repo"
+   - 選擇你的 `my-cloud-site` 儲存庫
+
+3. **設定環境變數**
+   - 在 Railway 專案設定中添加：
+   ```
+   PORT=3000
+   NODE_ENV=production
+   ```
+
+4. **部署設定**
+   - Railway 會自動檢測 Node.js 專案
+   - 確保 `package.json` 中的 `start` 腳本正確
+   - 點擊 "Deploy"
+
+5. **獲取部署 URL**
+   - 部署完成後，Railway 會提供一個 URL
+   - 例如：`https://my-cloud-site.up.railway.app`
+
+### 3. 前端配置更新
+
+修改 `frontend/main.js` 中的 baseURL：
+
+```javascript
+// 本地開發
+let baseURL = 'http://localhost:3000';
+
+// 生產環境（Railway）
+let baseURL = 'https://your-railway-url.up.railway.app';
+```
+
+### 4. 手機雲端連線
+
+部署完成後，你可以：
+- **手機瀏覽器**：直接訪問 Railway 提供的 URL
+- **分享連結**：將 URL 分享給其他人
+- **跨平台使用**：任何有瀏覽器的設備都能使用
+
+### 5. Railway 特色功能
+
+- ✅ **自動 HTTPS**：免費 SSL 證書
+- ✅ **自動部署**：Git push 後自動更新
+- ✅ **免費額度**：每月 500 小時免費使用
+- ✅ **自定義域名**：可綁定自己的域名
+- ✅ **環境變數**：安全的配置管理
+- ✅ **日誌查看**：實時監控應用狀態
+
 ## 🛠 部署指南
 
 ### 本地開發

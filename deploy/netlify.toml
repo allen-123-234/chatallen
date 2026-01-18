@@ -1,28 +1,21 @@
 {
-  "version": 2,
-  "builds": [
+  "build": {
+    "command": "echo 'No build needed'"
+  },
+  "redirects": [
     {
-      "src": "backend/index.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
+      "source": "/api/:path*",
+      "destination": "https://app-lin-git-main-linjunyuans-projects.vercel.app/api/:path*",
+      "status": 200
     }
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/*",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://allen-123-234.github.io"
+          "value": "https://wonderful-kelpie-6dd57e.netlify.app"
         },
         {
           "key": "Access-Control-Allow-Methods",
