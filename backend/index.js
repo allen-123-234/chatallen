@@ -297,9 +297,21 @@ app.post('/api/auth/send-verification-code', (req, res) => {
   console.log(`📧 驗證碼: ${code} (郵箱: ${email})`);
   
   // TODO: 集成真實的郵件服務（如 Nodemailer）
-  // 暫時返回成功即可
+  // 暫時在開發環境返回驗證碼，生產環境不返回
+  const isProduction = process.env.NODE_ENV === 'production';
   
-  res.json({ message: '驗證碼已發送' });
+  const response = {
+    message: '驗證碼已發送',
+    email
+  };
+  
+  // 開發環境下返回驗證碼以便測試
+  if (!isProduction) {
+    response.code = code;
+    response.devMessage = '⚠️ 開發環境：驗證碼已顯示，生產環境需要配置郵件服務';
+  }
+  
+  res.json(response);
 });
 
 // 驗證碼驗證

@@ -310,7 +310,13 @@ async function sendVerificationCode() {
     }
     
     showAuthError('');
-    alert('驗證碼已發送到您的郵箱，請查收');
+    
+    // 開發環境：顯示驗證碼
+    if (data.code) {
+      alert(`✅ 驗證碼已發送！\n\n開發環境驗證碼: ${data.code}\n\n請在下方輸入此驗證碼`);
+    } else {
+      alert('✅ 驗證碼已發送到您的郵箱，請查收');
+    }
     
     // 顯示第二步表單
     const step1 = document.getElementById('forgotStep1');
