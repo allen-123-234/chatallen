@@ -1053,35 +1053,35 @@ async function addPost() {
   }
 
   try {
-    let videoData = null;
-    let audioData = null;
+    let videoURL = null;
+    let audioURL = null;
 
-    // 處理影片
-    if (videoInput.files.length > 0) {
+    // 上傳影片到 Cloudinary
+    if (videoInput && videoInput.files.length > 0) {
       const videoFile = videoInput.files[0];
       if (videoFile.size > 50 * 1024 * 1024) {
         alert('影片檔案過大，請選擇小於 50MB 的檔案');
         return;
       }
-      videoData = await fileToBase64(videoFile);
+      videoURL = await uploadToCloudinary(videoFile, 'video');
     }
 
-    // 處理音頻
-    if (audioInput.files.length > 0) {
+    // 上傳音頻到 Cloudinary
+    if (audioInput && audioInput.files.length > 0) {
       const audioFile = audioInput.files[0];
       if (audioFile.size > 10 * 1024 * 1024) {
         alert('音頻檔案過大，請選擇小於 10MB 的檔案');
         return;
       }
-      audioData = await fileToBase64(audioFile);
+      audioURL = await uploadToCloudinary(audioFile, 'audio');
     }
 
     const postData = {
       title,
       content,
       author: currentUser.username,
-      video: videoData,
-      audio: audioData
+      video: videoURL,
+      audio: audioURL
     };
 
     const response = await fetch(`${baseURL}/api/posts`, {
@@ -1101,13 +1101,43 @@ async function addPost() {
       document.getElementById('mediaPreview').innerHTML = '';
       await loadPosts();
       await loadFeed();
+    } else {
+      const error = await response.json();
+      alert(`發佈失敗: ${error.error || '未知錯誤'}`);
     }
   } catch (error) {
     console.error('發佈文章出錯:', error);
+    alert('發佈失敗，請重試');
   }
 }
 
-// 將檔案轉換為 Base64
+// Cloudinary 上傳函數
+async function uploadToCloudinary(file, resourceType) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', 'my_cloud_site'); // 公開上傳預設
+  formData.append('cloud_name', 'dvansd2ej');
+
+  try {
+    const response = await fetch('https://api.cloudinary.com/v1_1/dvansd2ej/auto/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+    if (data.secure_url) {
+      return data.secure_url;
+    } else {
+      throw new Error('Cloudinary 上傳失敗');
+    }
+  } catch (error) {
+    console.error('Cloudinary 上傳錯誤:', error);
+    alert(`${resourceType === 'video' ? '影片' : '音頻'} 上傳失敗，請重試`);
+    throw error;
+  }
+}
+
+// 將檔案轉換為 Base64（保留備用）
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
