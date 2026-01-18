@@ -1,0 +1,38 @@
+[
+  {
+    "id": "admin-super",
+    "username": "allen",
+    "password": "allen0728",
+    "email": "superadmin@cloudsite.com",
+    "avatar": "https://picsum.photos/seed/superadmin/200/200.jpg",
+    "bio": "超級管理員",
+    "isAdmin": true,
+    "createdAt": "2026-01-18T02:00:00.000Z"
+  },
+  {
+    "id": "1768692790085",
+    "username": "aa",
+    "password": "aa",
+    "email": "gulin6411@gmail.com",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=seed7",
+    "bio": "",
+    "createdAt": "2026-01-17T23:33:10.085Z"
+  },
+  {
+    "id": "1768693058493",
+    "username": "bb",
+    "password": "bb",
+    "email": "gulin64111@gmail.com",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=bb",
+    "bio": "",
+    "createdAt": "2026-01-17T23:37:38.493Z"
+  },
+  {
+    "id": "1768696800831",
+    "username": "ccc",
+    "password": "allen990728",
+    "email": "tudolin0728@gmail.com",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=ccc",
+    "createdAt": "2026-01-18T00:40:00.831Z"
+  }
+]

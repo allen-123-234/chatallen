@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Cloud Site - 雲端應用</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        /* ==================== 主頁面 (Instagram 風格) ==================== */
+        .main-page {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #fafafa;
+        }
+
+        .main-page.hidden {
+            display: none;
+        }
+
+        .top-header {
+            background: white;
+            border-bottom: 1px solid #dbdbdb;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+
+        .header-left h1 {
+            font-size: 26px;
+            font-weight: bold;
+            color: #000;
+            margin: 0;
+        }
+
+        .header-center {
+            flex: 1;
+            max-width: 250px;
+            position: relative;
+        }
+
+        .header-center input {
+            width: 100%;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+
+        .header-center input:focus {
+            outline: none;
+            background: #e0e0e0;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            margin-top: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+
+        .search-results.show {
+            display: block;
+        }
+
+        .search-result-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .search-result-item:hover {
+            background: #f9f9f9;
+        }
+
+        .search-result-item img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+        }
+
+        .search-result-info {
+            flex: 1;
+        }
+
+        .search-result-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .search-result-id {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .search-result-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-result-actions button {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #ddd;
+            border: 1px solid #dbdbdb;
+        }
+
+        .logout-btn {
+            padding: 8px 15px;
+            background: none;
+            color: #667eea;
+            border: 1px solid #667eea;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #f9f9f9;
+        }
+
+        .main-content-wrapper {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .feed-page, .post-page, .chat-page, .profile-page {
+            display: none;
+        }
+
+        .feed-page.active, .post-page.active, .chat-page.active, .profile-page.active {
+            display: flex;
+        }
+
+        .feed-posts {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* ==================== 底部導航 ==================== */
+        .bottom-nav {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 12px 0;
+            background: white;
+            border-top: 1px solid #dbdbdb;
+            flex-shrink: 0;
+        }
+
+        .bottom-nav .nav-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+
+        .bottom-nav .nav-btn.active {
+            opacity: 1;
+        }
+
+        /* ==================== 創建文章盒子 ==================== */
+        .create-post-box {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .create-post-box h2 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .create-post-box button {
+            width: 100%;
+            padding: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* ==================== 對話頁面 ==================== */
+        .chat-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 15px;
+            height: calc(100vh - 120px); /* 固定高度，減去頂部導航和底部導航 */
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .chat-list {
+            border-right: 1px solid #f0f0f0;
+            overflow-y: auto;
+        }
+
+        .chat-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .chat-item:hover {
+            background: #f9f9f9;
+        }
+
+        .chat-item.active {
+            background: #ede9f6;
+        }
+
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ddd;
+            flex-shrink: 0;
+        }
+
+        .chat-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            background: white;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .chat-header .chat-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin-right: 12px;
+        }
+
+        .chat-header .chat-info {
+            flex: 1;
+        }
+
+        .chat-header .chat-name {
+            font-weight: 600;
+            color: #212529;
+            font-size: 16px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: #0084ff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-right: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(0, 132, 255, 0.1);
+        }
+
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            min-height: 0; /* 重要：讓flex子元素能正確縮放 */
+        }
+
+        .message-input-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .message-input-container input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #e9ecef;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .message-input-container input:focus {
+            border-color: #0084ff;
+        }
+
+        .message-input-container button {
+            padding: 10px 16px;
+            background: #0084ff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .message-input-container button:hover {
+            background: #0066d6;
+        }
+
+        .message {
+            max-width: 70%;
+            word-wrap: break-word;
+            margin: 4px 0;
+            position: relative;
+        }
+
+        .message.sent {
+            align-self: flex-end;
+        }
+
+        .message.received {
+            align-self: flex-start;
+        }
+
+        .message-dots {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            border-radius: 50%;
+            padding: 2px;
+            z-index: 10;
+        }
+
+        .message.sent .message-dots {
+            left: -30px;
+        }
+
+        .message.received .message-dots {
+            right: -30px;
+        }
+
+        .message:hover .message-dots {
+            opacity: 0.6;
+        }
+
+        .message-dots:hover {
+            opacity: 1 !important;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .message-content {
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .message.sent .message-content {
+            background: #0084ff;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.received .message-content {
+            background: #e9ecef;
+            color: #212529;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #868e96;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .message.received .message-time {
+            text-align: left;
+        }
+
+        .message-content {
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .message-dots {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            border-radius: 50%;
+            padding: 2px;
+        }
+
+        .message-content:hover .message-dots {
+            opacity: 0.6;
+        }
+
+        .message-dots:hover {
+            opacity: 1 !important;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .three-dots {
+            display: flex;
+            gap: 2px;
+            align-items: center;
+        }
+
+        .dot {
+            width: 3px;
+            height: 3px;
+            background: #666;
+            border-radius: 50%;
+        }
+
+        .message-options {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            z-index: 1000;
+            gap: 4px;
+            align-items: center;
+            min-width: 150px;
+        }
+
+        .option-btn {
+            background: none;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: #495057;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .option-btn:hover {
+            background: #f8f9fa;
+        }
+
+        .like-btn .like-icon {
+            font-size: 14px;
+        }
+
+        .like-btn .like-count {
+            font-size: 11px;
+            color: #868e96;
+            min-width: 12px;
+            text-align: center;
+        }
+
+        .delete-btn {
+            color: #dc3545;
+        }
+
+        .delete-btn:hover {
+            background: #fff5f5;
+            color: #c82333;
+        }
+
+        .like-icon {
+            width: 14px;
+            height: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .like-icon.not-liked {
+            fill: none;
+            stroke: #495057;
+            stroke-width: 2;
+        }
+
+        .like-icon.liked {
+            fill: #ff4757;
+            stroke: #ff4757;
+            stroke-width: 1;
+        }
+
+        .like-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .like-icon.not-liked:hover {
+            stroke: #ff4757;
+        }
+
+        .like-count {
+            font-size: 11px;
+            color: #868e96;
+            min-width: 12px;
+            text-align: center;
+            transition: color 0.2s ease;
+        }
+
+        .like-btn:hover .like-count {
+            color: #ff4757;
+        }
+
+        .message-input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .message-input-group input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .message-input-group button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        /* ==================== 用戶資料頁面 ==================== */
+        .profile-page {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .avatar-upload {
+            margin: 20px 0;
+        }
+
+        .avatar-upload button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .auth-page {
+            display: flex;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .auth-container {
+            margin: auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+        }
+
+        .auth-container h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .auth-container p {
+            text-align: center;
+            color: #999;
+            margin-bottom: 30px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            color: #999;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            margin-bottom: -2px;
+        }
+
+        .auth-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group select {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+
+        .auth-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .auth-error {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .auth-error.show {
+            display: block;
+        }
+
+        /* ==================== 主頁面 ==================== */
+        .main-page {
+            display: none;
+        }
+
+        .main-page.active {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .nav-btn {
+            color: white;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .nav-btn.active {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 300px;
+            display: flex;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            margin-top: 5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .search-results.show {
+            display: block;
+        }
+
+        .search-result-item {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .search-result-item:hover {
+            background: #f9f9f9;
+        }
+
+        .search-result-item img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        .search-result-info {
+            flex: 1;
+        }
+
+        .search-result-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .search-result-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-result-actions button {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .search-result-actions button:hover {
+            background: #764ba2;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ddd;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .logout-btn {
+            padding: 8px 15px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .admin-btn {
+            padding: 8px 15px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .admin-btn:hover {
+            background: #5a6268;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+        }
+
+        /* ==================== Feed 頁面 ==================== */
+        .feed-container {
+            display: none;
+        }
+
+        .feed-container.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .post-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .post-header {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .post-author-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ddd;
+            flex-shrink: 0;
+        }
+
+        .post-author-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .post-author-info {
+            flex: 1;
+        }
+
+        .post-author-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .post-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .post-body {
+            padding: 15px;
+        }
+
+        .post-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .post-content {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 20px;
+            padding: 12px 15px;
+            border-top: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .post-action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.3s;
+        }
+
+        .post-action-btn:hover {
+            color: #667eea;
+        }
+
+        .post-action-btn.liked {
+            color: #e74c3c;
+        }
+
+        .post-comments {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f9f9f9;
+        }
+
+        .comment {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comment-author {
+            font-weight: bold;
+            color: #333;
+            font-size: 13px;
+        }
+
+        .comment-content {
+            color: #666;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .comment-input-group {
+            display: flex;
+            gap: 8px;
+            padding: 12px 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .comment-input-group input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .comment-input-group button {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        /* ==================== 左側欄 - 對話 ==================== */
+        .sidebar-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-title {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            font-size: 1.1em;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .sidebar-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 0 0 10px 10px;
+        }
+
+        /* ==================== 右側欄 - 個人資料/文章 ==================== */
+        .profile-section {
+            display: none;
+        }
+
+        .profile-section.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .profile-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            background: #ddd;
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .profile-name {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .profile-username {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .profile-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            padding: 15px 0;
+            border-top: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .profile-stat {
+            text-align: center;
+        }
+
+        .profile-stat-value {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .profile-stat-label {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .profile-follow-btn {
+            width: 100%;
+            padding: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .profile-follow-btn:hover {
+            background: #764ba2;
+        }
+
+        .profile-follow-btn.following {
+            background: #999;
+        }
+
+        /* ==================== 側邊欄 ==================== */
+        .sidebar {
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-title {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .conversation-list {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .conversation-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .conversation-item:hover {
+            background: #f9f9f9;
+        }
+
+        .conversation-item.active {
+            background: #ede9f6;
+            border-left: 3px solid #667eea;
+        }
+
+        .conv-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ddd;
+            flex-shrink: 0;
+        }
+
+        .conv-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .conv-info {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .conv-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .conv-preview {
+            color: #999;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .conv-unread {
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        /* ==================== 聊天區域 ==================== */
+        .section {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            overflow: hidden;
+        }
+
+        .section h2 {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            font-size: 1.1em;
+        }
+
+        .section-content {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.sent {
+            background: #667eea;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .message.received {
+            background: #f0f0f0;
+            color: #333;
+            align-self: flex-start;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .message-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .message-input-group textarea {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+        }
+
+        .message-input-group button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            height: 50px;
+            transition: background 0.3s;
+        }
+
+        .message-input-group button:hover {
+            background: #764ba2;
+        }
+
+        /* ==================== 文章區域 ==================== */
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        button.danger {
+            background: #e74c3c;
+        }
+
+        button.danger:hover {
+            background: #c0392b;
+        }
+
+        .posts-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .item {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .item-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .item-content {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .item-meta {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .item-actions button {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #27ae60;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-indicator.disconnected {
+            background: #e74c3c;
+            animation: none;
+        }
+
+        .notification-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+
+        .notification-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #ff4757;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 5px;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+        }
+
+        .notification-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .notification-dropdown.show {
+            display: block;
+        }
+
+        .notification-header {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-clear-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .notification-clear-btn:hover {
+            background: #fff5f5;
+        }
+
+        .notification-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f8f9fa;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .notification-item:hover {
+            background: #f8f9fa;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-content {
+            font-size: 14px;
+            color: #495057;
+            margin-bottom: 4px;
+        }
+
+        .notification-time {
+            font-size: 12px;
+            color: #868e96;
+        }
+
+        .notification-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: #868e96;
+            font-size: 14px;
+        }
+
+        /* ==================== 管理員頁面 ==================== */
+        .admin-page {
+            display: none;
+            padding: 20px;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .admin-page.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-header {
+            background: #dc3545;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .admin-section h3 {
+            margin-top: 0;
+            color: #495057;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 10px;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .users-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .users-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .admin-badge {
+            background: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- ==================== 登入頁面 ==================== -->
+    <div class="auth-page" id="authPage">
+        <div class="auth-container">
+            <h1>☁️ My Cloud Site</h1>
+            <p>登入或建立新帳戶</p>
+
+            <div class="auth-error" id="authError"></div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('login', event)">登入</button>
+                <button class="auth-tab" onclick="switchAuthTab('register', event)">註冊</button>
+            </div>
+
+            <!-- 登入表單 -->
+            <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>用戶名</label>
+                    <input type="text" id="loginUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>密碼</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="auth-button">登入</button>
+            </form>
+
+            <!-- 註冊表單 -->
+            <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label>用戶名</label>
+                    <input type="text" id="registerUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>電子郵件</label>
+                    <input type="email" id="registerEmail">
+                </div>
+                <div class="form-group">
+                    <label>選擇頭像</label>
+                    <select id="registerAvatar">
+                        <option value="seed1">頭像 1</option>
+                        <option value="seed2">頭像 2</option>
+                        <option value="seed3">頭像 3</option>
+                        <option value="seed4">頭像 4</option>
+                        <option value="seed5">頭像 5</option>
+                    </select>
+                    <div id="avatarPreview" style="margin-top: 10px; text-align: center;">
+                        <img id="avatarPreviewImg" src="" alt="頭像預覽" style="width: 60px; height: 60px; border-radius: 50%; background: #ddd;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>密碼</label>
+                    <input type="password" id="registerPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>確認密碼</label>
+                    <input type="password" id="registerPasswordConfirm" required>
+                </div>
+                <button type="submit" class="auth-button">註冊</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== 主頁面 ==================== -->
+    <div class="main-page hidden" id="mainPage">
+        <!-- 頂部導航 -->
+        <div class="top-header">
+            <div class="header-left">
+                <h1>📸 CloudSite</h1>
+            </div>
+            <div class="header-center" id="searchBox">
+                <input type="text" id="searchInput" placeholder="搜尋用戶..." onkeyup="handleSearch()">
+                <div class="search-results" id="searchResults"></div>
+            </div>
+            <div class="header-right">
+                <div style="position: relative;">
+                    <button class="notification-btn" id="notificationBtn" onclick="toggleNotifications()">
+                        <span class="notification-icon">🔔</span>
+                        <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+                    </button>
+                    <div class="notification-dropdown" id="notificationDropdown">
+                        <div class="notification-header">
+                            <span>通知</span>
+                            <button class="notification-clear-btn" onclick="clearAllNotifications()">清除全部</button>
+                        </div>
+                        <div id="notificationList"></div>
+                    </div>
+                </div>
+                <img class="user-avatar" id="userAvatar" alt="頭像">
+                <span id="currentUser" style="color: white; max-width: 100px; overflow: hidden; text-overflow: ellipsis;"></span>
+                <button class="logout-btn" onclick="handleLogout()">登出</button>
+                <button class="admin-btn" id="adminBtn" onclick="showAdminPage()" style="display: none;">🛠️ 管理員</button>
+            </div>
+        </div>
+
+        <!-- 主要內容區域 -->
+        <div class="main-content-wrapper">
+            <!-- Feed 頁面 -->
+            <div class="feed-page" id="feedPage">
+                <div id="feedPosts" class="feed-posts"></div>
+            </div>
+
+            <!-- 發佈文章頁面 -->
+            <div class="post-page" id="postPage">
+                <div class="create-post-box">
+                    <h2>發佈新文章</h2>
+                    <div class="form-group">
+                        <label>文章標題</label>
+                        <input type="text" id="postTitle" placeholder="輸入標題">
+                    </div>
+                    <div class="form-group">
+                        <label>文章內容</label>
+                        <textarea id="postContent" placeholder="輸入內容"></textarea>
+                    </div>
+                    <button onclick="addPost()">發佈</button>
+                </div>
+                <div id="postsList"></div>
+            </div>
+
+            <!-- 對話頁面 -->
+            <div class="chat-page" id="chatPage">
+                <div class="chat-container">
+                    <div class="chat-list" id="chatList"></div>
+                    <div class="chat-area" id="chatArea"></div>
+                </div>
+            </div>
+
+            <!-- 用戶資料頁面 -->
+            <div class="profile-page" id="profilePage">
+                <div id="profileCard"></div>
+                <div class="avatar-upload" style="text-align: center; margin: 20px 0;">
+                    <p>頭像系統</p>
+                    <p style="color: #666; font-size: 12px;">目前使用預設頭像，上傳功能暫時關閉</p>
+                </div>
+            </div>
+
+            <!-- 管理員頁面 -->
+            <div class="admin-page" id="adminPage">
+                <div class="admin-header">
+                    <h2>🛠️ 管理員控制台</h2>
+                    <span id="adminStats"></span>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>📊 系統統計</h3>
+                    <div class="stats-grid" id="statsGrid"></div>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>🛠️ 管理員專用功能</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <button onclick="showAllUsers()" style="background: #17a2b8; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer;">👥 查看所有用戶</button>
+                        <button onclick="showSystemStats()" style="background: #28a745; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer;">📊 系統統計</button>
+                        <button onclick="clearAllData()" style="background: #dc3545; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer;">🗑️ 清除所有數據</button>
+                    </div>
+                    <div id="adminSpecialContent" style="margin-top: 15px;"></div>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>👥 用戶管理</h3>
+                    <div style="margin-bottom: 15px;">
+                        <input type="text" id="adminSearchInput" placeholder="搜索用戶..." 
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                               onkeyup="searchAdminUsers()">
+                        <div id="adminSearchResults" style="margin-top: 10px; color: #666;"></div>
+                    </div>
+                    <table class="users-table" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>用戶名</th>
+                                <th>郵箱</th>
+                                <th>文章數</th>
+                                <th>粉絲數</th>
+                                <th>追蹤數</th>
+                                <th>角色</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部導航欄 -->
+        <div class="bottom-nav">
+            <button class="nav-btn active" onclick="switchMainPage('feed')">🏠</button>
+            <button class="nav-btn" onclick="switchMainPage('post')">➕</button>
+            <button class="nav-btn" onclick="switchMainPage('chat')">💬</button>
+            <button class="nav-btn" onclick="switchMainPage('profile')">👤</button>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
+

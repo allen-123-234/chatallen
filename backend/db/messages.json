@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1768702797558,
+    "senderId": "1768696800831",
+    "recipientId": "1768692790085",
+    "content": "aaaaaaa",
+    "timestamp": "2026-01-18T02:19:57.558Z",
+    "isRead": false
+  },
+  {
+    "id": 1768704654682,
+    "senderId": "1768693058493",
+    "recipientId": "1768692790085",
+    "content": "aaaa",
+    "timestamp": "2026-01-18T02:50:54.682Z",
+    "isRead": false
+  }
+]

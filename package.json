@@ -1,0 +1,19 @@
+{
+  "name": "my-cloud-site",
+  "version": "1.0.0",
+  "description": "A full-stack web application with REST API and real-time chat",
+  "main": "backend/index.js",
+  "scripts": {
+    "start": "node backend/index.js",
+    "dev": "node --watch backend/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "ws": "^8.13.0"
+  },
+  "devDependencies": {}
+}
