@@ -5,6 +5,7 @@ let baseURL = window.location.hostname === 'localhost'
 let currentUser = null;
 let currentToken = null;
 let selectedUserId = null;
+let currentSelectedConversation = null;
 let ws = null;
 let allUsers = [];
 let allAdminUsers = []; // 管理員專用用戶列表
@@ -606,11 +607,12 @@ function selectConversation(userId, username, avatar) {
 }
 
 // ==================== 訊息功能 ====================
-async function loadMessages() {
-  if (!selectedUserId) return;
+async function loadMessages(userId) {
+  const targetUserId = userId || selectedUserId;
+  if (!targetUserId) return;
 
   try {
-    const response = await fetch(`${baseURL}/api/messages/${selectedUserId}`, {
+    const response = await fetch(`${baseURL}/api/messages/${targetUserId}`, {
       headers: { 'Authorization': `Bearer ${currentToken}` }
     });
     const messages = await response.json();
@@ -1782,8 +1784,6 @@ function showAvatarOptions() {
   input.onchange = previewAvatar;
   input.click();
 }
-  }
-}
 
 async function changeAvatar(avatarData) {
   // avatarData 可以是 Base64 字符串或 null（使用上傳的圖片）
@@ -1822,9 +1822,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('📄 頁面加載開始');
   
   // 添加頭像選擇監聽器
-  const avatarSelect = document.getElementById('registerAvatar');
+  const avatarSelect = document.getElementById('registerAvatarFile');
   if (avatarSelect) {
-    avatarSelect.addEventListener('change', updateAvatarPreview);
+    avatarSelect.addEventListener('change', previewAvatar);
     // 初始化預覽
     updateAvatarPreview();
   }
